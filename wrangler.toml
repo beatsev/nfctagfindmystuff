@@ -1,0 +1,29 @@
+name = "nfc-tag-tracker"
+main = "src/index.ts"
+compatibility_date = "2025-12-20"
+
+[observability]
+enabled = true
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "findmy_tags"
+database_id = "af3c79ad-4306-4ebb-b453-780dc2ed76d6"
+migrations_dir = "migrations"
+
+# KV namespace binding
+[[kv_namespaces]]
+binding = "TAGS_KV"
+id = "c9dabfb65b944773bb7b6b1b58ceda71"
+
+# Environment variables
+[vars]
+DOMAIN = "http://localhost:8787"
+SESSION_DURATION_HOURS = "720"
+MAGIC_LINK_EXPIRY_MINUTES = "15"
+
+# Secrets (set via: wrangler secret put <NAME>)
+# TELEGRAM_BOT_TOKEN
+# JWT_SECRET
+# MAGIC_LINK_SECRET
