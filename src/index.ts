@@ -4,6 +4,7 @@ import { cors } from 'hono/cors';
 import { serveStatic } from 'hono/cloudflare-workers';
 import type { Env } from './types/env';
 import publicRoutes from './routes/public';
+import adminRoutes from './routes/admin';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -22,6 +23,7 @@ app.get('/styles.css', serveStatic({ path: './public/styles.css' }));
 
 // Routes
 app.route('/', publicRoutes);
+app.route('/', adminRoutes);
 
 // Health check route
 app.get('/', (c) => {

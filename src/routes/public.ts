@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../types/env';
 import { lookupTag } from '../services/tag-lookup';
 import { logScanEvent } from '../services/scan-event';
+import { sendTelegramNotification } from '../services/telegram';
 import { renderLandingPage } from '../views/landing-page';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -53,8 +54,21 @@ app.get('/t/:tagId', async (c) => {
     country: cf?.country || null,
   }, c.env);
 
-  // 4. TODO: Send notification (Phase 3 - Telegram integration)
-  // We'll implement this in the next phase
+  // 4. Send Telegram notification (async, non-blocking)
+  const approxLocation = [cf?.city, cf?.region, cf?.country]
+    .filter(Boolean)
+    .join(', ') || null;
+
+  c.executionCtx.waitUntil(
+    sendTelegramNotification({
+      userId: tagData.userId,
+      objectName: tagData.objectName,
+      tagId: tagData.tagId,
+      scanEventId,
+      approxLocation,
+      hasMessage: false,
+    }, c.env)
+  );
 
   // 5. Render landing page
   const html = renderLandingPage({
