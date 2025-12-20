@@ -4,11 +4,12 @@ import { lookupTag } from '../services/tag-lookup';
 import { logScanEvent } from '../services/scan-event';
 import { sendTelegramNotification } from '../services/telegram';
 import { renderLandingPage } from '../views/landing-page';
+import { rateLimitMiddleware } from '../middleware/rate-limit';
 
 const app = new Hono<{ Bindings: Env }>();
 
 // GET /t/:tagId - Landing page for finders
-app.get('/t/:tagId', async (c) => {
+app.get('/t/:tagId', rateLimitMiddleware(10, 60), async (c) => {
   const tagId = c.req.param('tagId');
 
   // 1. Lookup tag (KV + D1 cache)
