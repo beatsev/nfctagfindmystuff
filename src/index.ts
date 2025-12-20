@@ -6,6 +6,8 @@ import type { Env } from './types/env';
 import publicRoutes from './routes/public';
 import adminRoutes from './routes/admin';
 import apiFinderRoutes from './routes/api-finder';
+import authRoutes from './routes/auth';
+import dashboardRoutes from './routes/dashboard';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -26,6 +28,8 @@ app.get('/styles.css', serveStatic({ path: './public/styles.css' }));
 app.route('/', publicRoutes);
 app.route('/', adminRoutes);
 app.route('/', apiFinderRoutes);
+app.route('/', authRoutes);
+app.route('/', dashboardRoutes);
 
 // Health check route
 app.get('/', (c) => {
