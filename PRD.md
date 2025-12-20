@@ -16,6 +16,111 @@ People lose valuable items (bags, laptops, keys, etc.) and need a way to:
 
 Deploy passive NFC tags with unique URLs that, when scanned, trigger server-side notifications and provide a privacy-preserving contact interface.
 
+## Implementation Status
+
+**Last Updated**: December 20, 2025
+
+### ✅ Phase 1: Foundation (COMPLETED)
+- [x] Project initialization with npm and TypeScript
+- [x] Cloudflare Workers setup with Hono framework
+- [x] D1 database created and configured
+- [x] KV namespace created and bound
+- [x] Environment variables configured (.dev.vars)
+- [x] Basic health check endpoint
+
+### ✅ Phase 2: Core Tag Scanning (COMPLETED)
+- [x] Database schema migrations (7 files)
+  - [x] users, objects, tags, scan_events tables
+  - [x] finder_messages, owner_notifications tables
+  - [x] Performance indexes
+  - [x] photo_url column added to objects
+- [x] Tag lookup service with KV + D1 read-through cache
+- [x] Scan event logging with IP hashing (SHA-256)
+- [x] Landing page for finders (HTML/CSS/JS)
+- [x] Cloudflare metadata extraction (city, region, country)
+- [x] Test data inserted and verified
+
+### ✅ Phase 3: Telegram Integration (COMPLETED)
+- [x] Telegram bot created (@Nfcstufffinderbottagger_bot)
+- [x] Notification service with Markdown formatting
+- [x] Non-blocking notifications using ctx.waitUntil()
+- [x] Notification status logging to database
+- [x] Admin endpoint to capture user chat IDs
+- [x] Live testing confirmed (user received notification)
+
+### ✅ Phase 4: Finder Actions (COMPLETED)
+- [x] POST /api/t/:tagId/message endpoint
+  - [x] Zod validation for message content
+  - [x] Contact info support (optional)
+  - [x] Telegram notification with message preview
+- [x] POST /api/t/:tagId/location endpoint
+  - [x] GPS coordinate validation
+  - [x] Updates scan_events with lat/lng
+- [x] Rate limiting middleware (in-memory)
+  - [x] 10 requests/min for landing pages
+  - [x] 3 messages/5min per IP
+  - [x] 5 location updates/5min per IP
+- [x] Rate limit headers (X-RateLimit-*)
+- [x] Cleanup logic for memory management
+
+### ✅ Phase 5: Authentication (COMPLETED)
+- [x] JWT session management with jose library
+- [x] Magic link authentication via Telegram
+  - [x] 15-minute magic link expiry
+  - [x] 30-day session duration
+- [x] Login page with email form
+- [x] Auth middleware for protected routes
+- [x] API auth middleware with 401 responses
+- [x] Logout functionality
+- [x] HTTP-only cookies with SameSite protection
+- [x] Rate limiting on login (5 attempts/5min)
+
+### ✅ Phase 6: Dashboard API (COMPLETED)
+- [x] GET /api/objects - List with aggregated stats
+- [x] POST /api/objects - Create new object
+- [x] GET /api/objects/:id - Get single object with tags
+- [x] PATCH /api/objects/:id - Update object fields
+- [x] POST /api/tags - Create/link tag with KV caching
+- [x] PATCH /api/tags/:tagId - Update tag or toggle active
+- [x] GET /api/tags/:tagId/scans - Scan history
+- [x] GET /api/messages - Finder messages with filters
+- [x] Ownership verification on all operations
+- [x] Dynamic SQL for partial updates
+- [x] Input validation with Zod schemas
+
+### ✅ Phase 7: Dashboard UI (COMPLETED)
+- [x] Dashboard home page with objects grid
+- [x] Object detail page with tabbed interface
+  - [x] Tags management tab
+  - [x] Scan history tab with locations
+  - [x] Finder messages tab
+- [x] HTMX modal forms for object creation
+- [x] HTMX modal forms for tag creation
+- [x] Responsive design (mobile-first)
+- [x] Status badges (active/lost/recovered)
+- [x] Empty states with helpful prompts
+- [x] Navigation bar with message counter
+- [x] Tab switching without page reload
+
+### 🚧 Phase 8: Polish & Testing (IN PROGRESS)
+- [ ] Map visualization for scan locations
+- [ ] Enhanced error handling and user feedback
+- [ ] Comprehensive end-to-end testing
+- [ ] Performance optimization
+- [ ] Accessibility improvements (ARIA labels)
+- [ ] Mobile responsiveness testing
+- [ ] Cross-browser compatibility testing
+
+### 📋 Phase 9: Deployment (PLANNED)
+- [ ] Production environment variables setup
+- [ ] D1 migrations to production
+- [ ] Cloudflare Workers deployment
+- [ ] Custom domain configuration
+- [ ] SSL/TLS setup
+- [ ] Production testing
+- [ ] Documentation for setup and usage
+- [ ] README with deployment instructions
+
 ## Core User Flows
 
 ### 1. Owner Setup Flow
