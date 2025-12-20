@@ -1,7 +1,9 @@
 import { Hono } from 'hono';
 import { logger } from 'hono/logger';
 import { cors } from 'hono/cors';
+import { serveStatic } from 'hono/cloudflare-workers';
 import type { Env } from './types/env';
+import publicRoutes from './routes/public';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -14,6 +16,12 @@ app.onError((err, c) => {
   console.error('Error:', err);
   return c.json({ error: 'Internal Server Error' }, 500);
 });
+
+// Serve static CSS
+app.get('/styles.css', serveStatic({ path: './public/styles.css' }));
+
+// Routes
+app.route('/', publicRoutes);
 
 // Health check route
 app.get('/', (c) => {
