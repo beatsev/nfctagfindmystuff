@@ -1,0 +1,38 @@
+{
+  "name": "nfctagfindmystuff",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "migration:local": "wrangler d1 migrations apply findmy_tags --local",
+    "migration:remote": "wrangler d1 migrations apply findmy_tags --remote",
+    "db:query": "wrangler d1 execute findmy_tags --local",
+    "tail": "wrangler tail"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/beatsev/nfctagfindmystuff.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/beatsev/nfctagfindmystuff/issues"
+  },
+  "homepage": "https://github.com/beatsev/nfctagfindmystuff#readme",
+  "dependencies": {
+    "@hono/zod-validator": "^0.7.6",
+    "hono": "^4.11.1",
+    "jose": "^6.1.3",
+    "ulid": "^3.0.2",
+    "zod": "^4.2.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251218.0",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.56.0"
+  }
+}
