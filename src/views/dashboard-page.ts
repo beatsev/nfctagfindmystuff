@@ -1,6 +1,8 @@
 export interface DashboardPageProps {
   userName?: string;
   userEmail: string;
+  objects: any[];
+  unreadMessages: number;
 }
 
 export function renderDashboardPage(props: DashboardPageProps): string {
@@ -11,46 +13,220 @@ export function renderDashboardPage(props: DashboardPageProps): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - NFC Tag Tracker</title>
   <link rel="stylesheet" href="/styles.css">
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <style>
+    .nav-bar {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .nav-bar h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .nav-links {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    .nav-link {
+      color: white;
+      text-decoration: none;
+      font-size: 14px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .nav-link:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    .nav-link.active {
+      background: rgba(255,255,255,0.3);
+    }
+    .main-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+    .page-header h2 {
+      margin: 0;
+      font-size: 28px;
+      color: #333;
+    }
+    .objects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 24px;
+    }
+    .object-card {
+      background: white;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 20px;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .object-card:hover {
+      border-color: #667eea;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+      transform: translateY(-2px);
+    }
+    .object-card h3 {
+      margin: 0 0 8px 0;
+      font-size: 18px;
+      color: #333;
+    }
+    .object-card p {
+      margin: 4px 0;
+      font-size: 14px;
+      color: #666;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .status-active { background: #e8f5e9; color: #2e7d32; }
+    .status-lost { background: #fff3e0; color: #e65100; }
+    .status-recovered { background: #e3f2fd; color: #1565c0; }
+    .stats {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+      font-size: 13px;
+      color: #666;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 64px 32px;
+      background: #f9f9f9;
+      border-radius: 12px;
+      margin-top: 24px;
+    }
+    .empty-state h3 {
+      font-size: 20px;
+      color: #666;
+      margin-bottom: 12px;
+    }
+  </style>
 </head>
-<body>
-  <div class="container">
-    <div class="card" style="max-width: 800px;">
-      <div class="icon">📊</div>
-      <h1>Welcome${props.userName ? `, ${props.userName}` : ''}!</h1>
-      <p class="description">
-        Logged in as: <strong>${props.userEmail}</strong>
-      </p>
-
-      <div style="margin: 32px 0; padding: 24px; background: #f5f5f5; border-radius: 12px;">
-        <h2 style="margin-top: 0; font-size: 18px; color: #333;">Dashboard Coming Soon</h2>
-        <p style="color: #666; line-height: 1.6; margin-bottom: 16px;">
-          Your dashboard is under construction. Soon you'll be able to:
-        </p>
-        <ul style="text-align: left; color: #666; line-height: 1.8;">
-          <li>📦 Manage your objects and NFC tags</li>
-          <li>📍 View scan history and locations</li>
-          <li>💬 Read messages from finders</li>
-          <li>⚙️ Configure notification settings</li>
-        </ul>
-      </div>
-
-      <form method="POST" action="/api/auth/logout" style="margin-top: 24px;">
-        <button
-          type="submit"
-          class="cta-button"
-          style="background: #666; width: auto; padding: 12px 32px;"
-        >
+<body style="margin: 0; background: #f5f5f5;">
+  <div class="nav-bar">
+    <h1>🏷️ NFC Tag Tracker</h1>
+    <div class="nav-links">
+      <a href="/dashboard" class="nav-link active">Objects</a>
+      <a href="/dashboard/messages" class="nav-link">
+        Messages ${props.unreadMessages > 0 ? `<span style="background: #ff5252; color: white; padding: 2px 6px; border-radius: 10px; font-size: 11px; margin-left: 4px;">${props.unreadMessages}</span>` : ''}
+      </a>
+      <form method="POST" action="/api/auth/logout" style="margin: 0;">
+        <button type="submit" class="nav-link" style="background: none; border: none; cursor: pointer; font-family: inherit; font-size: 14px;">
           Logout
         </button>
       </form>
-
-      <div class="privacy" style="margin-top: 24px;">
-        <p style="font-size: 14px; color: #999;">
-          Session expires in 30 days
-        </p>
-      </div>
     </div>
   </div>
+
+  <div class="main-content">
+    <div class="page-header">
+      <div>
+        <h2>My Objects</h2>
+        <p style="color: #666; margin: 4px 0 0 0;">Track your tagged items</p>
+      </div>
+      <button
+        hx-get="/dashboard/objects/new"
+        hx-target="#modal-container"
+        hx-swap="innerHTML"
+        class="cta-button"
+        style="width: auto; padding: 12px 24px;"
+      >
+        + Add Object
+      </button>
+    </div>
+
+    ${props.objects.length === 0 ? `
+      <div class="empty-state">
+        <div style="font-size: 48px; margin-bottom: 16px;">📦</div>
+        <h3>No objects yet</h3>
+        <p style="color: #999; margin-bottom: 24px;">Start by adding your first object to track</p>
+        <button
+          hx-get="/dashboard/objects/new"
+          hx-target="#modal-container"
+          hx-swap="innerHTML"
+          class="cta-button"
+          style="width: auto; padding: 12px 24px;"
+        >
+          + Add Your First Object
+        </button>
+      </div>
+    ` : `
+      <div class="objects-grid">
+        ${props.objects.map(obj => `
+          <a href="/dashboard/objects/${obj.id}" style="text-decoration: none; color: inherit;">
+            <div class="object-card">
+              <h3>${escapeHtml(obj.name)}</h3>
+              ${obj.description ? `<p>${escapeHtml(obj.description)}</p>` : ''}
+              <span class="status-badge status-${obj.status}">${obj.status}</span>
+              <div class="stats">
+                <span>🏷️ ${obj.tag_count} tag${obj.tag_count !== 1 ? 's' : ''}</span>
+                <span>👁️ ${obj.scan_count} scan${obj.scan_count !== 1 ? 's' : ''}</span>
+              </div>
+              ${obj.last_scan ? `<p style="font-size: 12px; color: #999; margin-top: 8px;">Last seen: ${formatDate(obj.last_scan)}</p>` : ''}
+            </div>
+          </a>
+        `).join('')}
+      </div>
+    `}
+  </div>
+
+  <div id="modal-container"></div>
+
+  <script>
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diff = now - date;
+      const minutes = Math.floor(diff / 60000);
+      const hours = Math.floor(diff / 3600000);
+      const days = Math.floor(diff / 86400000);
+
+      if (minutes < 1) return 'Just now';
+      if (minutes < 60) return minutes + 'm ago';
+      if (hours < 24) return hours + 'h ago';
+      if (days < 7) return days + 'd ago';
+      return date.toLocaleDateString();
+    }
+  </script>
 </body>
 </html>`;
+}
+
+function escapeHtml(text: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+function formatDate(dateStr: string): string {
+  // This is a placeholder - actual formatting happens client-side
+  return dateStr;
 }
