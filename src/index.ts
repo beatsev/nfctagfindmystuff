@@ -8,6 +8,7 @@ import adminRoutes from './routes/admin';
 import apiFinderRoutes from './routes/api-finder';
 import authRoutes from './routes/auth';
 import dashboardRoutes from './routes/dashboard';
+import apiDashboardRoutes from './routes/api-dashboard';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -30,6 +31,7 @@ app.route('/', adminRoutes);
 app.route('/', apiFinderRoutes);
 app.route('/', authRoutes);
 app.route('/', dashboardRoutes);
+app.route('/', apiDashboardRoutes);
 
 // Health check route
 app.get('/', (c) => {
