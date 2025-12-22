@@ -485,7 +485,7 @@ app.get('/dashboard/objects/:id', async (c) => {
   </script>
 
   <!-- QR Code Generation -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode.js/1.5.3/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/lib/browser.js"></script>
   <script>
     // Generate QR codes for all tags
     function generateQRCodes() {
