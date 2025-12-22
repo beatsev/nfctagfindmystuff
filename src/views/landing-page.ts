@@ -49,35 +49,35 @@ export function renderLandingPage(props: LandingPageProps): string {
       </div>
 
       <div class="section">
-        <h3>Send a Message to the Owner</h3>
+        <h3>💬 Send a Message to the Owner</h3>
         <form
           hx-post="/api/t/${props.tagId}/message"
           hx-swap="outerHTML"
           class="message-form"
           aria-label="Contact owner form">
           <input type="hidden" name="scan_event_id" value="${props.scanEventId}">
-          <label for="message" style="display: block; margin-bottom: 8px; font-weight: 500;">
-            Your message
-          </label>
-          <textarea
-            id="message"
-            name="message"
-            placeholder="I found your item at..."
-            required
-            aria-required="true"
-            maxlength="1000"
-            rows="4"></textarea>
-          <label for="contact" style="display: block; margin-bottom: 8px; margin-top: 12px; font-weight: 500;">
-            Contact info (optional)
-          </label>
-          <input
-            id="contact"
-            type="text"
-            name="contact"
-            placeholder="Your email or phone (optional)"
-            aria-label="Your contact information"
-            maxlength="200">
-          <button type="submit" aria-label="Send message to item owner">Send Message</button>
+          <div>
+            <label for="message">Your message</label>
+            <textarea
+              id="message"
+              name="message"
+              placeholder="I found your item at..."
+              required
+              aria-required="true"
+              maxlength="1000"
+              rows="4"></textarea>
+          </div>
+          <div>
+            <label for="contact">Contact info (optional)</label>
+            <input
+              id="contact"
+              type="text"
+              name="contact"
+              placeholder="Your email or phone (optional)"
+              aria-label="Your contact information"
+              maxlength="200">
+          </div>
+          <button type="submit" aria-label="Send message to item owner">📨 Send Message</button>
         </form>
       </div>
 
