@@ -34,6 +34,20 @@ export function renderLandingPage(props: LandingPageProps): string {
       <h2>${escapeHtml(props.objectName)}</h2>
       ${props.description ? `<p class="description">${escapeHtml(props.description)}</p>` : ''}
 
+      <div class="location-section">
+        <div class="location-icon">📍</div>
+        <h3 class="location-title">Help Return This Item</h3>
+        <p class="location-description">Share your location so the owner knows where to find their item</p>
+        <button
+          id="share-location-btn"
+          class="location-btn"
+          aria-label="Share your current location with the owner">
+          <span class="btn-icon">📍</span>
+          <span class="btn-text">Tap to Share Location</span>
+        </button>
+        <p class="location-hint">Just tap and allow when prompted</p>
+      </div>
+
       <div class="section">
         <h3>Send a Message to the Owner</h3>
         <form
@@ -67,15 +81,6 @@ export function renderLandingPage(props: LandingPageProps): string {
         </form>
       </div>
 
-      <div class="section">
-        <button
-          id="share-location-btn"
-          class="secondary-btn"
-          aria-label="Share your current location with the owner">
-          📍 Share My Location
-        </button>
-      </div>
-
       <div class="privacy">
         <small>
           🔒 <strong>Privacy:</strong> We log scan time and approximate location (city/region from your IP address).
@@ -95,7 +100,11 @@ export function renderLandingPage(props: LandingPageProps): string {
       }
 
       const btn = document.getElementById('share-location-btn');
-      btn.textContent = '⏳ Getting location...';
+      const btnIcon = btn.querySelector('.btn-icon');
+      const btnText = btn.querySelector('.btn-text');
+
+      btnIcon.textContent = '⏳';
+      btnText.textContent = 'Getting location...';
       btn.disabled = true;
 
       navigator.geolocation.getCurrentPosition(async (position) => {
@@ -111,21 +120,25 @@ export function renderLandingPage(props: LandingPageProps): string {
           });
 
           if (response.ok) {
-            btn.textContent = '✅ Location shared!';
-            btn.style.backgroundColor = '#22c55e';
+            btnIcon.textContent = '✅';
+            btnText.textContent = 'Location Shared!';
+            btn.classList.add('success');
           } else {
-            btn.textContent = '❌ Failed to share';
-            btn.style.backgroundColor = '#ef4444';
+            btnIcon.textContent = '❌';
+            btnText.textContent = 'Failed to share';
+            btn.classList.add('error');
             btn.disabled = false;
           }
         } catch (error) {
-          btn.textContent = '❌ Error occurred';
-          btn.style.backgroundColor = '#ef4444';
+          btnIcon.textContent = '❌';
+          btnText.textContent = 'Error occurred';
+          btn.classList.add('error');
           btn.disabled = false;
         }
       }, (error) => {
-        btn.textContent = '❌ Location access denied';
-        btn.style.backgroundColor = '#ef4444';
+        btnIcon.textContent = '❌';
+        btnText.textContent = 'Location access denied';
+        btn.classList.add('error');
         btn.disabled = false;
       });
     });
