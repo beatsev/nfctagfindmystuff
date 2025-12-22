@@ -203,6 +203,8 @@ app.get('/dashboard/objects/:id', async (c) => {
   <title>${object.name} - Dashboard</title>
   <link rel="stylesheet" href="/styles.css">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     ${getCommonStyles()}
     .tabs {
@@ -320,19 +322,29 @@ app.get('/dashboard/objects/:id', async (c) => {
         <div class="empty-state" style="padding: 48px;">
           <p>No scans yet. When someone scans your tag, the events will appear here.</p>
         </div>
-      ` : scans.results.map((scan: any) => `
-        <div class="scan-item">
-          <div style="display: flex; justify-content: space-between; align-items: start;">
-            <div>
-              <p style="margin: 0; font-weight: 500;">${scan.approx_location || 'Unknown location'}</p>
-              <p style="margin: 4px 0 0 0; font-size: 13px; color: #999;">${new Date(scan.ts).toLocaleString()}</p>
-            </div>
-            ${scan.has_message ? '<span style="background: #e3f2fd; color: #1565c0; padding: 4px 8px; border-radius: 6px; font-size: 12px;">💬 Message</span>' : ''}
+      ` : `
+        <!-- Map Container -->
+        ${scans.results.some((s: any) => s.lat && s.lng) ? `
+          <div style="margin-bottom: 24px; border-radius: 12px; overflow: hidden; border: 2px solid #e0e0e0;">
+            <div id="map" style="height: 400px; width: 100%;"></div>
           </div>
-          ${scan.lat && scan.lng ? `<p style="margin: 8px 0 0 0; font-size: 13px; color: #666;">📍 ${scan.lat.toFixed(4)}, ${scan.lng.toFixed(4)}</p>` : ''}
-        </div>
-      `).join('')}
-    </div>
+        ` : ''}
+
+        <!-- Scan List -->
+        ${scans.results.map((scan: any) => `
+          <div class="scan-item">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+              <div>
+                <p style="margin: 0; font-weight: 500;">${scan.approx_location || 'Unknown location'}</p>
+                <p style="margin: 4px 0 0 0; font-size: 13px; color: #999;">${new Date(scan.ts).toLocaleString()}</p>
+              </div>
+              ${scan.has_message ? '<span style="background: #e3f2fd; color: #1565c0; padding: 4px 8px; border-radius: 6px; font-size: 12px;">💬 Message</span>' : ''}
+            </div>
+            ${scan.lat && scan.lng ? `<p style="margin: 8px 0 0 0; font-size: 13px; color: #666;">📍 ${scan.lat.toFixed(4)}, ${scan.lng.toFixed(4)}</p>` : ''}
+          </div>
+        `).join('')}
+      `}
+    </div>`
 
     <div class="tab-content">
       <h3>Finder Messages</h3>
@@ -363,6 +375,52 @@ app.get('/dashboard/objects/:id', async (c) => {
       contents.forEach((content, i) => {
         content.classList.toggle('active', i === index);
       });
+
+      // Initialize map when switching to scans tab
+      if (index === 1 && !window.mapInitialized) {
+        initMap();
+      }
+    }
+
+    let mapInitialized = false;
+
+    function initMap() {
+      const mapElement = document.getElementById('map');
+      if (!mapElement || mapInitialized) return;
+
+      const scans = ${JSON.stringify(scans.results.filter((s: any) => s.lat && s.lng))};
+
+      if (scans.length === 0) return;
+
+      // Create map centered on first scan
+      const map = L.map('map').setView([scans[0].lat, scans[0].lng], 10);
+
+      // Add OpenStreetMap tiles
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+      }).addTo(map);
+
+      // Add markers for each scan
+      scans.forEach((scan, index) => {
+        const marker = L.marker([scan.lat, scan.lng]).addTo(map);
+        marker.bindPopup(\`
+          <strong>\${scan.approx_location || 'Unknown location'}</strong><br>
+          \${new Date(scan.ts).toLocaleString()}<br>
+          \${scan.has_message ? '💬 Has message' : ''}
+        \`);
+
+        // Open first marker popup
+        if (index === 0) marker.openPopup();
+      });
+
+      // Fit map to show all markers
+      if (scans.length > 1) {
+        const bounds = L.latLngBounds(scans.map(s => [s.lat, s.lng]));
+        map.fitBounds(bounds, { padding: [50, 50] });
+      }
+
+      mapInitialized = true;
     }
   </script>
 </body>
@@ -517,6 +575,155 @@ function getCommonStyles(): string {
     }
   `;
 }
+
+// GET /dashboard/messages - Messages inbox page
+app.get('/dashboard/messages', async (c) => {
+  const user = c.get('user') as SessionPayload;
+
+  const messages = await c.env.DB.prepare(`
+    SELECT
+      fm.id,
+      fm.scan_event_id,
+      fm.tag_id,
+      fm.object_id,
+      fm.message,
+      fm.contact,
+      fm.created_at,
+      o.name as object_name,
+      o.status as object_status,
+      se.approx_location,
+      se.lat,
+      se.lng
+    FROM finder_messages fm
+    JOIN objects o ON fm.object_id = o.id
+    LEFT JOIN scan_events se ON fm.scan_event_id = se.id
+    WHERE o.user_id = ?
+    ORDER BY fm.created_at DESC
+  `).bind(user.userId).all();
+
+  return c.html(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Messages - Dashboard</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    ${getCommonStyles()}
+    .message-card {
+      background: white;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+      transition: border-color 0.2s;
+    }
+    .message-card:hover {
+      border-color: #667eea;
+    }
+    .message-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 16px;
+    }
+    .message-body {
+      background: #f9f9f9;
+      padding: 16px;
+      border-radius: 8px;
+      margin: 16px 0;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .message-meta {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      color: #666;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body style="margin: 0; background: #f5f5f5;">
+  <div class="nav-bar">
+    <h1>🏷️ NFC Tag Tracker</h1>
+    <div class="nav-links">
+      <a href="/dashboard" class="nav-link">Objects</a>
+      <a href="/dashboard/messages" class="nav-link active">Messages</a>
+      <form method="POST" action="/api/auth/logout" style="margin: 0;">
+        <button type="submit" class="nav-link" style="background: none; border: none; cursor: pointer; font-family: inherit; font-size: 14px;">
+          Logout
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="page-header">
+      <div>
+        <h2>Finder Messages</h2>
+        <p style="color: #666; margin: 4px 0 0 0;">Messages from people who found your items</p>
+      </div>
+    </div>
+
+    ${messages.results.length === 0 ? `
+      <div class="empty-state">
+        <div style="font-size: 48px; margin-bottom: 16px;">💬</div>
+        <h3>No messages yet</h3>
+        <p style="color: #999; margin-bottom: 24px;">
+          When someone finds your tagged item and sends a message,<br>
+          it will appear here.
+        </p>
+      </div>
+    ` : `
+      <div style="margin-top: 24px;">
+        ${messages.results.map((msg: any) => `
+          <div class="message-card">
+            <div class="message-header">
+              <div>
+                <h3 style="margin: 0; font-size: 18px; color: #333;">
+                  <a href="/dashboard/objects/${msg.object_id}" style="color: #667eea; text-decoration: none;">
+                    ${escapeHtml(msg.object_name)}
+                  </a>
+                </h3>
+                <p style="margin: 4px 0 0 0; font-size: 13px; color: #999;">
+                  ${new Date(msg.created_at).toLocaleString()}
+                </p>
+              </div>
+              <span class="status-badge status-${msg.object_status}">${msg.object_status}</span>
+            </div>
+
+            <div class="message-body">
+              "${escapeHtml(msg.message)}"
+            </div>
+
+            <div class="message-meta">
+              ${msg.contact ? `
+                <div>
+                  <strong>Contact:</strong> ${escapeHtml(msg.contact)}
+                </div>
+              ` : ''}
+              <div>
+                <strong>Location:</strong> ${msg.approx_location || 'Unknown'}
+              </div>
+              ${msg.lat && msg.lng ? `
+                <div>
+                  <strong>GPS:</strong> ${msg.lat.toFixed(4)}, ${msg.lng.toFixed(4)}
+                </div>
+              ` : ''}
+              <div>
+                <strong>Tag:</strong> <code>${msg.tag_id}</code>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `}
+  </div>
+</body>
+</html>`);
+});
 
 function escapeHtml(text: string): string {
   const map: Record<string, string> = {

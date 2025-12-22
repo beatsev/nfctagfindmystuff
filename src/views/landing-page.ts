@@ -39,27 +39,39 @@ export function renderLandingPage(props: LandingPageProps): string {
         <form
           hx-post="/api/t/${props.tagId}/message"
           hx-swap="outerHTML"
-          class="message-form">
+          class="message-form"
+          aria-label="Contact owner form">
           <input type="hidden" name="scan_event_id" value="${props.scanEventId}">
+          <label for="message" style="display: block; margin-bottom: 8px; font-weight: 500;">
+            Your message
+          </label>
           <textarea
+            id="message"
             name="message"
             placeholder="I found your item at..."
             required
+            aria-required="true"
             maxlength="1000"
             rows="4"></textarea>
+          <label for="contact" style="display: block; margin-bottom: 8px; margin-top: 12px; font-weight: 500;">
+            Contact info (optional)
+          </label>
           <input
+            id="contact"
             type="text"
             name="contact"
             placeholder="Your email or phone (optional)"
+            aria-label="Your contact information"
             maxlength="200">
-          <button type="submit">Send Message</button>
+          <button type="submit" aria-label="Send message to item owner">Send Message</button>
         </form>
       </div>
 
       <div class="section">
         <button
           id="share-location-btn"
-          class="secondary-btn">
+          class="secondary-btn"
+          aria-label="Share your current location with the owner">
           📍 Share My Location
         </button>
       </div>
