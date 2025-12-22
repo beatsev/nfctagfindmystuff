@@ -4,6 +4,7 @@ A serverless web application for tracking lost items via NFC tags. When someone 
 
 ## Features
 
+✅ **Self-Service Signup** - Friends and family can create accounts via Telegram bot
 ✅ **NFC Tag Scanning** - Instant landing pages when tags are scanned
 ✅ **Telegram Notifications** - Real-time alerts when your items are found
 ✅ **Finder Messages** - Anonymous communication between finders and owners
@@ -95,11 +96,21 @@ A serverless web application for tracking lost items via NFC tags. When someone 
 
    Server will be available at `http://localhost:8787`
 
-## Database Setup
+## Creating Your Account
 
-### Initial Test Data
+### Self-Service Signup (Recommended)
 
-Insert a test user and object to get started:
+New users can create accounts without manual setup:
+
+1. **Message the bot** on Telegram: [@your_nfc_bot_bot](https://t.me/Nfcstufffinderbottagger_bot)
+2. **Send `/start` command**
+3. **Click the signup link** you receive (valid for 1 hour)
+4. **Fill in your email and name**
+5. **Start creating tags!** You'll be logged in automatically
+
+### Manual Setup (Advanced)
+
+For development/testing, you can manually insert test data:
 
 ```bash
 npx wrangler d1 execute findmy_tags --local --command "
@@ -114,23 +125,21 @@ VALUES ('DEMO123', 'obj_test456', 1);
 "
 ```
 
-### Get Your Telegram Chat ID
-
+**Get Your Telegram Chat ID:**
 1. Message your bot on Telegram
 2. Visit `http://localhost:8787/admin/telegram-updates`
 3. Find your `chat_id` in the response
-4. Update the user record with your chat ID
 
 ## Usage
 
 ### For Owners
 
-1. **Login** - Visit `/login` and enter your email
-2. **Check Telegram** - Click the magic link sent to your Telegram
-3. **Add Objects** - Create objects you want to track
+1. **Sign Up** - Message [@your_nfc_bot_bot](https://t.me/Nfcstufffinderbottagger_bot) and send `/start`
+2. **Complete Signup** - Click the link and fill in your email and name
+3. **Add Objects** - Create objects you want to track in the dashboard
 4. **Create Tags** - Generate NFC tag IDs and link them to objects
 5. **Program NFC Tags** - Use NFC Tools app to write the URL to physical tags
-6. **Get Notified** - Receive instant alerts when tags are scanned
+6. **Get Notified** - Receive instant Telegram alerts when tags are scanned
 
 ### For Finders
 
@@ -155,9 +164,10 @@ nfctagfindmystuff/
 │   │   ├── admin.ts             # Admin endpoints
 │   │   ├── api-dashboard.ts     # Dashboard API
 │   │   ├── api-finder.ts        # Finder endpoints
-│   │   ├── auth.ts              # Auth routes
+│   │   ├── auth.ts              # Auth & signup routes
 │   │   ├── dashboard.ts         # Dashboard UI
-│   │   └── public.ts            # Public landing pages
+│   │   ├── public.ts            # Public landing pages
+│   │   └── telegram-webhook.ts  # Bot webhook handler
 │   ├── services/
 │   │   ├── scan-event.ts        # Scan logging
 │   │   ├── tag-lookup.ts        # KV + D1 cache
@@ -167,7 +177,8 @@ nfctagfindmystuff/
 │   └── views/
 │       ├── dashboard-page.ts    # Dashboard HTML
 │       ├── landing-page.ts      # Finder landing page
-│       └── login-page.ts        # Login form
+│       ├── login-page.ts        # Login form
+│       └── signup-page.ts       # Signup form
 ├── migrations/                  # Database migrations (8 files)
 ├── public/
 │   └── styles.css              # Global styles
@@ -183,12 +194,18 @@ nfctagfindmystuff/
 - `POST /api/t/:tagId/message` - Send message to owner
 - `POST /api/t/:tagId/location` - Share GPS location
 
-### Authentication
+### Authentication & Signup
 
 - `GET /login` - Login page
 - `POST /api/auth/login` - Send magic link
 - `GET /api/auth/verify?token=...` - Verify token
+- `GET /signup?token=...` - Signup page
+- `POST /api/auth/signup` - Create new account
 - `POST /api/auth/logout` - Logout
+
+### Telegram Bot
+
+- `POST /api/telegram/webhook` - Receive bot messages (handles `/start` command)
 
 ### Dashboard (Auth Required)
 
