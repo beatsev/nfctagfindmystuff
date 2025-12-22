@@ -37,7 +37,12 @@ app.post(
       ).bind(scan_event_id).first();
 
       if (!scanEvent || scanEvent.tag_id !== tagId) {
-        return c.json({ error: 'Invalid scan event' }, 400);
+        return c.html(`
+          <div class="success-message" style="background: linear-gradient(to bottom, #fee2e2, #fecaca); border-color: #ef4444;">
+            <p style="color: #991b1b;">❌ <strong>Error</strong></p>
+            <p style="color: #b91c1c;">Invalid scan event. Please try scanning the tag again.</p>
+          </div>
+        `, 400);
       }
 
       // Get object and user info for notification
@@ -48,7 +53,12 @@ app.post(
       `).bind(scanEvent.object_id).first();
 
       if (!objectData) {
-        return c.json({ error: 'Object not found' }, 404);
+        return c.html(`
+          <div class="success-message" style="background: linear-gradient(to bottom, #fee2e2, #fecaca); border-color: #ef4444;">
+            <p style="color: #991b1b;">❌ <strong>Error</strong></p>
+            <p style="color: #b91c1c;">Item not found. Please contact support.</p>
+          </div>
+        `, 404);
       }
 
       // Insert message
@@ -77,10 +87,21 @@ app.post(
         }, c.env)
       );
 
-      return c.json({ success: true, message: 'Message sent to owner' });
+      // Return HTML for HTMX to swap in
+      return c.html(`
+        <div class="success-message">
+          <p>✅ <strong>Message sent to owner!</strong></p>
+          <p>They will be notified and can reach out to you if you provided contact information.</p>
+        </div>
+      `);
     } catch (error) {
       console.error('Error saving message:', error);
-      return c.json({ error: 'Failed to send message' }, 500);
+      return c.html(`
+        <div class="success-message" style="background: linear-gradient(to bottom, #fee2e2, #fecaca); border-color: #ef4444;">
+          <p style="color: #991b1b;">❌ <strong>Error</strong></p>
+          <p style="color: #b91c1c;">Failed to send message. Please try again.</p>
+        </div>
+      `, 500);
     }
   }
 );
