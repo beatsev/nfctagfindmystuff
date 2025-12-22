@@ -5,6 +5,7 @@ A serverless web application for tracking lost items via NFC tags. When someone 
 ## Features
 
 ✅ **Self-Service Signup** - Friends and family can create accounts via Telegram bot
+✅ **QR Code Generation** - Download and print QR codes for each tag
 ✅ **NFC Tag Scanning** - Instant landing pages when tags are scanned
 ✅ **Telegram Notifications** - Real-time alerts when your items are found
 ✅ **Finder Messages** - Anonymous communication between finders and owners
@@ -137,16 +138,32 @@ VALUES ('DEMO123', 'obj_test456', 1);
 1. **Sign Up** - Message [@Nfcstufffinderbottagger_bot](https://t.me/Nfcstufffinderbottagger_bot) and send `/start`
 2. **Complete Signup** - Click the link and fill in your email and name
 3. **Add Objects** - Create objects you want to track in the dashboard
-4. **Create Tags** - Generate NFC tag IDs and link them to objects
-5. **Program NFC Tags** - Use NFC Tools app to write the URL to physical tags
+4. **Create Tags** - Generate tag IDs and link them to objects
+5. **Deploy Tags** - Choose your method:
+   - **QR Codes** (Easiest): Download QR code from dashboard, print and attach
+   - **NFC Tags**: Use NFC Tools app to write the URL to physical NFC tags
+   - **Both**: Use both QR and NFC on the same item for maximum compatibility
 6. **Get Notified** - Receive instant Telegram alerts when tags are scanned
 
 ### For Finders
 
-1. **Scan Tag** - Tap your phone to the NFC tag
+1. **Scan Tag** - Scan QR code with camera or tap NFC tag
 2. **View Landing Page** - See item details and owner contact options
 3. **Send Message** - Optionally leave a message and contact info
 4. **Share Location** - Optionally share GPS coordinates
+
+### QR Codes vs NFC Tags
+
+| Feature | QR Codes | NFC Tags |
+|---------|----------|----------|
+| **Compatibility** | Any phone with camera | NFC-enabled phones only |
+| **Setup** | Print immediately from dashboard | Requires NFC writing hardware |
+| **Cost** | Free (print at home) | ~$1-3 per tag |
+| **Durability** | Paper/sticker (varies) | Durable plastic/metal |
+| **Range** | Visual line-of-sight (1-2m) | Touch/proximity only |
+| **Use Case** | Quick deployment, visible labels | Permanent, embedded tags |
+
+**💡 Recommendation:** Use both! Place a QR code on the visible surface and hide an NFC tag inside the item for maximum recovery chances.
 
 ## Project Structure
 
