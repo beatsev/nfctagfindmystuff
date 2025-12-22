@@ -162,6 +162,36 @@ Deploy passive NFC tags with unique URLs that, when scanned, trigger server-side
   - [x] Webhook tested and verified
   - [x] Signup flow tested end-to-end
 
+### ✅ Phase 11: QR Code Generation (COMPLETED)
+- [x] Client-side QR code generation with qrcodejs library
+  - [x] CDN integration (https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js)
+  - [x] Browser-compatible library (no Node.js dependencies)
+  - [x] Automatic generation on page load
+  - [x] HTMX tab switching support with event listeners
+- [x] Dashboard tag display enhancements
+  - [x] QR code container div for each tag (88x88px)
+  - [x] Download button for PNG export
+  - [x] Clickable tag URL display
+  - [x] Active/inactive status badges
+- [x] CSS styling and responsiveness
+  - [x] Tag item layout with QR code positioning
+  - [x] Mobile responsive design
+  - [x] Secondary button styling
+  - [x] Status badge styling (active/inactive)
+- [x] Download functionality
+  - [x] Canvas to PNG conversion
+  - [x] Automatic filename generation (tag-{tagId}-qr.png)
+  - [x] One-click download
+- [x] Documentation updates
+  - [x] README.md updated with QR code feature
+  - [x] QR Codes vs NFC Tags comparison table
+  - [x] Usage instructions for owners and finders
+- [x] Production deployment and testing
+  - [x] Browser compatibility verified
+  - [x] QR codes scannable with phone cameras
+  - [x] Download functionality tested
+  - [x] All changes committed and pushed
+
 ## Core User Flows
 
 ### 1. User Signup Flow (NEW)
@@ -179,13 +209,16 @@ Deploy passive NFC tags with unique URLs that, when scanned, trigger server-side
 1. Owner logs into dashboard (or just signed up)
 2. Creates an "object" record (e.g., "Laptop bag")
 3. Assigns a new NFC tag with unique ID (e.g., `ABC123`)
-4. System generates URL: `https://yourdomain.com/t/ABC123`
-5. Owner writes URL to physical NFC tag using NFC Tools app
-6. Attaches tag to item
+4. System generates URL: `https://yourdomain.com/t/ABC123` and displays QR code
+5. Owner chooses deployment method:
+   - **QR Code**: Download and print QR code from dashboard
+   - **NFC Tag**: Write URL to physical NFC tag using NFC Tools app
+   - **Both**: Use both methods for maximum compatibility
+6. Attaches tag/sticker to item
 
-### 2. Finder Scan Flow
-1. Finder's phone touches NFC tag
-2. Phone reads NDEF URI and opens URL in browser
+### 3. Finder Scan Flow
+1. Finder scans item (via NFC tap or QR code camera scan)
+2. Phone opens URL in browser
 3. Landing page loads showing:
    - Item name and optional photo
    - "This item is lost" message
