@@ -6,6 +6,10 @@ account_id = "816727d62e0ec8eeb7ece43aba72eedb"
 [observability]
 enabled = true
 
+# Static assets configuration
+[assets]
+directory = "./public"
+
 # D1 Database binding
 [[d1_databases]]
 binding = "DB"
