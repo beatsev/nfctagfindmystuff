@@ -257,6 +257,17 @@ app.get('/dashboard/objects/:id', async (c) => {
       border-radius: 4px;
       padding: 4px;
       background: white;
+      width: 88px;
+      height: 88px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tag-qr canvas,
+    .tag-qr img {
+      display: block;
+      max-width: 100%;
+      height: auto;
     }
     .tag-status {
       padding: 4px 12px;
@@ -360,7 +371,7 @@ app.get('/dashboard/objects/:id', async (c) => {
               </p>
             </div>
             <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-              <canvas id="qr-${tag.id}" class="tag-qr" width="80" height="80"></canvas>
+              <div id="qr-${tag.id}" class="tag-qr"></div>
               <button
                 onclick="downloadQR('qr-${tag.id}', '${tag.id}')"
                 class="secondary-btn"
@@ -485,7 +496,7 @@ app.get('/dashboard/objects/:id', async (c) => {
   </script>
 
   <!-- QR Code Generation -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/lib/browser.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script>
     // Generate QR codes for all tags
     function generateQRCodes() {
@@ -501,23 +512,36 @@ app.get('/dashboard/objects/:id', async (c) => {
           return;
         }
 
-        QRCode.toCanvas(canvas, url, {
-          width: 80,
-          margin: 1,
-          color: {
-            dark: '#667eea',
-            light: '#ffffff'
-          }
-        }, function(error) {
-          if (error) console.error('QR generation error:', error);
-        });
+        // Clear any existing QR code
+        canvas.innerHTML = '';
+
+        // Generate QR code
+        try {
+          new QRCode(canvas, {
+            text: url,
+            width: 80,
+            height: 80,
+            colorDark: '#667eea',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.M
+          });
+        } catch(error) {
+          console.error('QR generation error:', error);
+        }
       });
     }
 
     // Download QR code as PNG
     function downloadQR(canvasId, tagId) {
-      const canvas = document.getElementById(canvasId);
-      if (!canvas) return;
+      const container = document.getElementById(canvasId);
+      if (!container) return;
+
+      // Find the canvas inside the container (qrcodejs creates it)
+      const canvas = container.querySelector('canvas');
+      if (!canvas) {
+        console.error('No canvas found in QR container');
+        return;
+      }
 
       const link = document.createElement('a');
       link.download = 'tag-' + tagId + '-qr.png';
