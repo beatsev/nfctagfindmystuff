@@ -9,6 +9,7 @@ import apiFinderRoutes from './routes/api-finder';
 import authRoutes from './routes/auth';
 import dashboardRoutes from './routes/dashboard';
 import apiDashboardRoutes from './routes/api-dashboard';
+import telegramWebhookRoutes from './routes/telegram-webhook';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -32,6 +33,7 @@ app.route('/', apiFinderRoutes);
 app.route('/', authRoutes);
 app.route('/', dashboardRoutes);
 app.route('/', apiDashboardRoutes);
+app.route('/', telegramWebhookRoutes);
 
 // Health check route
 app.get('/', (c) => {
