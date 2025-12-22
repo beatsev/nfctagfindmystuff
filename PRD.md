@@ -136,10 +136,47 @@ Deploy passive NFC tags with unique URLs that, when scanned, trigger server-side
 - [x] Test data inserted (user, object, tag)
 - [x] Documentation complete (README.md with deployment instructions)
 
+### ✅ Phase 10: User Signup Flow (COMPLETED)
+- [x] Telegram bot webhook handler
+  - [x] POST /api/telegram/webhook endpoint
+  - [x] Handle /start command
+  - [x] Generate signup tokens with 1-hour TTL
+  - [x] Store tokens in KV (signup:{uuid} → chat_id)
+  - [x] Send personalized signup links
+- [x] Signup page views
+  - [x] GET /signup?token=... form page
+  - [x] Signup error page for expired/invalid tokens
+  - [x] HTMX form submission
+- [x] Account creation endpoint
+  - [x] POST /api/auth/signup with validation
+  - [x] Check email uniqueness
+  - [x] Create user with Telegram chat_id
+  - [x] Auto-login after signup
+  - [x] One-time token deletion
+- [x] Updated login page with signup link
+- [x] Telegram webhook configured
+  - [x] Webhook URL set via Telegram API
+  - [x] Bot responds to /start and /help commands
+- [x] Production deployment and testing
+  - [x] All changes deployed to production
+  - [x] Webhook tested and verified
+  - [x] Signup flow tested end-to-end
+
 ## Core User Flows
 
-### 1. Owner Setup Flow
-1. Owner logs into dashboard
+### 1. User Signup Flow (NEW)
+1. User messages @Nfcstufffinderbottagger_bot on Telegram
+2. User sends `/start` command
+3. Bot generates unique signup token (1-hour expiry)
+4. Bot sends personalized signup link via Telegram
+5. User clicks link and lands on signup page
+6. User fills in email address and name
+7. System creates user account with Telegram chat_id linked
+8. User is auto-logged in with session cookie
+9. User redirected to dashboard
+
+### 2. Owner Setup Flow
+1. Owner logs into dashboard (or just signed up)
 2. Creates an "object" record (e.g., "Laptop bag")
 3. Assigns a new NFC tag with unique ID (e.g., `ABC123`)
 4. System generates URL: `https://yourdomain.com/t/ABC123`
