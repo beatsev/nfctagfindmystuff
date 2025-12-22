@@ -26,7 +26,7 @@ export function renderLandingPage(props: LandingPageProps): string {
   <link rel="stylesheet" href="/styles.css">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 </head>
-<body>
+<body class="landing-page">
   <div class="container">
     <div class="card">
       <h1>Lost Item Found!</h1>
