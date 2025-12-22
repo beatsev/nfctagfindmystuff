@@ -25,10 +25,10 @@ const locationSchema = z.object({
 app.post(
   '/api/t/:tagId/message',
   rateLimitMiddleware(3, 300), // 3 messages per 5 minutes
-  zValidator('json', messageSchema),
+  zValidator('form', messageSchema),
   async (c) => {
     const tagId = c.req.param('tagId');
-    const { scan_event_id, message, contact } = c.req.valid('json');
+    const { scan_event_id, message, contact } = c.req.valid('form');
 
     try {
       // Verify scan event belongs to this tag
