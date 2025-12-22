@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { setCookie, deleteCookie } from 'hono/cookie';
 import type { Env } from '../types/env';
 import { renderLoginPage } from '../views/login-page';
+import { renderSignupPage, renderSignupErrorPage } from '../views/signup-page';
 import { createMagicLinkToken, verifyMagicLinkToken, createSessionToken } from '../lib/jwt';
 import { rateLimitMiddleware } from '../middleware/rate-limit';
 
@@ -12,6 +13,12 @@ const app = new Hono<{ Bindings: Env }>();
 // Validation schemas
 const loginSchema = z.object({
   email: z.string().email(),
+});
+
+const signupSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1).max(100),
+  token: z.string().uuid(),
 });
 
 // GET /login - Show login page
@@ -149,6 +156,112 @@ app.get('/api/auth/verify', async (c) => {
     }));
   }
 });
+
+// GET /signup - Show signup page
+app.get('/signup', async (c) => {
+  const token = c.req.query('token');
+
+  if (!token) {
+    return c.html(renderSignupErrorPage(
+      'No signup token provided. Please message the bot to get a signup link.'
+    ));
+  }
+
+  // Verify token exists in KV
+  const chatId = await c.env.TAGS_KV.get(`signup:${token}`);
+
+  if (!chatId) {
+    return c.html(renderSignupErrorPage(
+      'This signup link has expired or is invalid. Signup links are valid for 1 hour.'
+    ));
+  }
+
+  return c.html(renderSignupPage({ token }));
+});
+
+// POST /api/auth/signup - Create new user account
+app.post(
+  '/api/auth/signup',
+  rateLimitMiddleware(5, 300), // 5 signups per 5 minutes
+  zValidator('form', signupSchema),
+  async (c) => {
+    const { email, name, token } = c.req.valid('form');
+
+    try {
+      // Get chat_id from KV using signup token
+      const chatId = await c.env.TAGS_KV.get(`signup:${token}`);
+
+      if (!chatId) {
+        return c.json({
+          success: false,
+          error: 'Signup link expired. Please get a new link from the bot.',
+        }, 400);
+      }
+
+      // Check if email already exists
+      const existingUser = await c.env.DB.prepare(
+        'SELECT id FROM users WHERE email = ?'
+      ).bind(email).first();
+
+      if (existingUser) {
+        return c.json({
+          success: false,
+          error: 'An account with this email already exists. Try logging in instead.',
+        }, 400);
+      }
+
+      // Generate user ID
+      const userId = crypto.randomUUID();
+
+      // Insert new user
+      await c.env.DB.prepare(`
+        INSERT INTO users (id, email, name, telegram_chat_id, created_at)
+        VALUES (?, ?, ?, ?, datetime('now'))
+      `).bind(userId, email, name, chatId).run();
+
+      // Delete signup token (one-time use)
+      await c.env.TAGS_KV.delete(`signup:${token}`);
+
+      // Create session token
+      const sessionToken = await createSessionToken(
+        {
+          userId,
+          email,
+        },
+        c.env.JWT_SECRET,
+        parseInt(c.env.SESSION_DURATION_HOURS || '720', 10)
+      );
+
+      // Set session cookie
+      setCookie(c, 'session', sessionToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'Lax',
+        maxAge: parseInt(c.env.SESSION_DURATION_HOURS || '720', 10) * 3600,
+        path: '/',
+      });
+
+      // Return success - HTMX will redirect
+      return c.html(`
+        <div style="text-align: center; padding: 20px;">
+          <h2 style="color: #22c55e;">✅ Account Created!</h2>
+          <p>Redirecting to dashboard...</p>
+          <script>
+            setTimeout(() => {
+              window.location.href = '/dashboard';
+            }, 1000);
+          </script>
+        </div>
+      `);
+    } catch (error) {
+      console.error('Signup error:', error);
+      return c.json({
+        success: false,
+        error: 'Failed to create account. Please try again.',
+      }, 500);
+    }
+  }
+);
 
 // POST /api/auth/logout - Clear session
 app.post('/api/auth/logout', (c) => {

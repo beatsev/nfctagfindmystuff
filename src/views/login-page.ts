@@ -65,10 +65,26 @@ export function renderLoginPage(props: LoginPageProps = {}): string {
           1️⃣ Enter your registered email<br>
           2️⃣ Check your Telegram for a login link<br>
           3️⃣ Click the link to access your dashboard<br>
-          <br>
-          <small style="color: #999;">
-            Don't have an account yet? Contact support to get started.
-          </small>
+        </p>
+      </div>
+
+      <div style="margin-top: 32px; padding-top: 24px; border-top: 2px solid #e0e0e0;">
+        <h3 style="text-align: center; margin-bottom: 16px; color: #333;">New User?</h3>
+        <p style="text-align: center; margin-bottom: 16px; color: #666; font-size: 14px;">
+          Get started by messaging our Telegram bot to receive a signup link
+        </p>
+        <div style="text-align: center;">
+          <a
+            href="https://t.me/Nfcstufffinderbottagger_bot"
+            target="_blank"
+            class="cta-button"
+            style="display: inline-block; text-decoration: none; padding: 12px 24px; font-size: 15px;"
+          >
+            📱 Start Signup on Telegram
+          </a>
+        </div>
+        <p style="text-align: center; margin-top: 12px; color: #999; font-size: 12px;">
+          Send <code>/start</code> to get your personal signup link
         </p>
       </div>
     </div>
