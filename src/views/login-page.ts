@@ -33,7 +33,7 @@ export function renderLoginPage(props: LoginPageProps = {}): string {
         </div>
       ` : ''}
 
-      <form method="POST" action="/api/auth/login" style="width: 100%; max-width: 400px;">
+      <form method="POST" action="/api/auth/login" style="width: 100%; max-width: 400px;" aria-label="Login form">
         <div style="margin-bottom: 16px;">
           <label for="email" style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">
             Email Address
@@ -43,6 +43,7 @@ export function renderLoginPage(props: LoginPageProps = {}): string {
             id="email"
             name="email"
             required
+            aria-required="true"
             placeholder="you@example.com"
             style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; box-sizing: border-box;"
           >
@@ -52,6 +53,7 @@ export function renderLoginPage(props: LoginPageProps = {}): string {
           type="submit"
           class="cta-button"
           style="width: 100%; padding: 14px; font-size: 16px; margin-top: 8px;"
+          aria-label="Send magic link to email"
         >
           Send Magic Link
         </button>

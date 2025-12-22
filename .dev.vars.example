@@ -1,0 +1,11 @@
+# Local development environment variables
+# Copy this file to .dev.vars and fill in your actual values
+
+# Telegram Bot Token (get from @BotFather on Telegram)
+TELEGRAM_BOT_TOKEN=your_bot_token_here
+
+# JWT secret for session tokens (use a strong random string)
+JWT_SECRET=your-random-jwt-secret-change-in-production
+
+# Magic link secret for email verification (use a different strong random string)
+MAGIC_LINK_SECRET=your-random-magic-link-secret-change-in-production
