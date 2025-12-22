@@ -249,7 +249,41 @@ app.get('/dashboard/objects/:id', async (c) => {
       padding: 16px;
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .tag-qr {
+      border: 2px solid #e0e0e0;
+      border-radius: 4px;
+      padding: 4px;
+      background: white;
+    }
+    .tag-status {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .tag-status.active {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    .tag-status.inactive {
+      background: #ffebee;
+      color: #c62828;
+    }
+    .secondary-btn {
+      background: #f5f5f5;
+      color: #333;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 6px 12px;
+      transition: background 0.2s;
+    }
+    .secondary-btn:hover {
+      background: #eeeeee;
     }
     .scan-item, .message-item {
       background: white;
@@ -257,6 +291,18 @@ app.get('/dashboard/objects/:id', async (c) => {
       border-radius: 8px;
       padding: 16px;
       margin-bottom: 12px;
+    }
+    @media (max-width: 600px) {
+      .tag-item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .tag-item > div:last-child {
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+      }
     }
   </style>
 </head>
@@ -304,13 +350,27 @@ app.get('/dashboard/objects/:id', async (c) => {
           </div>
         ` : tags.results.map((tag: any) => `
           <div class="tag-item">
-            <div>
+            <div style="flex: 1;">
               <code style="font-size: 16px; font-weight: 600; color: #667eea;">${tag.id}</code>
               ${tag.label ? `<p style="margin: 4px 0 0 0; color: #666; font-size: 14px;">${escapeHtml(tag.label)}</p>` : ''}
+              <p style="margin: 8px 0 0 0; font-size: 12px; color: #999;">
+                <a href="${c.env.DOMAIN}/t/${tag.id}" target="_blank" style="color: #667eea; text-decoration: none;">
+                  ${c.env.DOMAIN}/t/${tag.id} ↗
+                </a>
+              </p>
             </div>
-            <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; ${tag.active ? 'background: #e8f5e9; color: #2e7d32;' : 'background: #ffebee; color: #c62828;'}">
-              ${tag.active ? 'Active' : 'Inactive'}
-            </span>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+              <canvas id="qr-${tag.id}" class="tag-qr" width="80" height="80"></canvas>
+              <button
+                onclick="downloadQR('qr-${tag.id}', '${tag.id}')"
+                class="secondary-btn"
+                style="font-size: 11px; padding: 4px 8px; white-space: nowrap;">
+                💾 Download
+              </button>
+              <span class="tag-status ${tag.active ? 'active' : 'inactive'}">
+                ${tag.active ? 'Active' : 'Inactive'}
+              </span>
+            </div>
           </div>
         `).join('')}
       </div>
@@ -422,6 +482,59 @@ app.get('/dashboard/objects/:id', async (c) => {
 
       mapInitialized = true;
     }
+  </script>
+
+  <!-- QR Code Generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode.js/1.5.3/qrcode.min.js"></script>
+  <script>
+    // Generate QR codes for all tags
+    function generateQRCodes() {
+      document.querySelectorAll('[id^="qr-"]').forEach(canvas => {
+        if (!canvas) return;
+
+        const tagId = canvas.id.replace('qr-', '');
+        const url = '${c.env.DOMAIN}/t/' + tagId;
+
+        // Check if qrcode library is loaded
+        if (typeof QRCode === 'undefined') {
+          console.error('QRCode library not loaded');
+          return;
+        }
+
+        QRCode.toCanvas(canvas, url, {
+          width: 80,
+          margin: 1,
+          color: {
+            dark: '#667eea',
+            light: '#ffffff'
+          }
+        }, function(error) {
+          if (error) console.error('QR generation error:', error);
+        });
+      });
+    }
+
+    // Download QR code as PNG
+    function downloadQR(canvasId, tagId) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+
+      const link = document.createElement('a');
+      link.download = 'tag-' + tagId + '-qr.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    // Generate on initial page load
+    document.addEventListener('DOMContentLoaded', generateQRCodes);
+
+    // Regenerate after HTMX tab switching
+    document.body.addEventListener('htmx:afterSettle', function(event) {
+      if (event.target.querySelector && event.target.querySelector('[id^="qr-"]')) {
+        // Small delay to ensure DOM is ready
+        setTimeout(generateQRCodes, 100);
+      }
+    });
   </script>
 </body>
 </html>`);
