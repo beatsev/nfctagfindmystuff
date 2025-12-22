@@ -29,7 +29,6 @@ export function renderLandingPage(props: LandingPageProps): string {
 <body>
   <div class="container">
     <div class="card">
-      <div class="icon">📦</div>
       <h1>Lost Item Found!</h1>
       <h2>${escapeHtml(props.objectName)}</h2>
       ${props.description ? `<p class="description">${escapeHtml(props.description)}</p>` : ''}
