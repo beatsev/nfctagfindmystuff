@@ -344,7 +344,7 @@ app.get('/dashboard/objects/:id', async (c) => {
           </div>
         `).join('')}
       `}
-    </div>`
+    </div>
 
     <div class="tab-content">
       <h3>Finder Messages</h3>

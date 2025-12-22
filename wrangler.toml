@@ -1,6 +1,7 @@
 name = "nfc-tag-tracker"
 main = "src/index.ts"
 compatibility_date = "2025-12-20"
+account_id = "816727d62e0ec8eeb7ece43aba72eedb"
 
 [observability]
 enabled = true
@@ -19,7 +20,7 @@ id = "c9dabfb65b944773bb7b6b1b58ceda71"
 
 # Environment variables
 [vars]
-DOMAIN = "http://localhost:8787"
+DOMAIN = "https://nfc-tag-tracker.beatsev.workers.dev"
 SESSION_DURATION_HOURS = "720"
 MAGIC_LINK_EXPIRY_MINUTES = "15"
 
