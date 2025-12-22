@@ -143,13 +143,6 @@ export function renderLandingPage(props: LandingPageProps): string {
       });
     });
 
-    // Handle HTMX form success
-    document.body.addEventListener('htmx:afterSwap', (event) => {
-      const target = event.detail.target;
-      if (target.classList && target.classList.contains('message-form')) {
-        target.innerHTML = '<div class="success-message"><p>✅ <strong>Message sent to owner!</strong></p><p>They will be notified and can reach out to you if you provided contact information.</p></div>';
-      }
-    });
   </script>
 </body>
 </html>`;
