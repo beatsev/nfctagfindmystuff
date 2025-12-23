@@ -26,14 +26,14 @@ app.onError((err, c) => {
 // Serve static CSS
 app.get('/styles.css', serveStatic({ path: './public/styles.css' }));
 
-// Routes
+// Routes (order matters! More specific routes first)
+app.route('/', telegramWebhookRoutes);  // Must be before apiDashboardRoutes
 app.route('/', publicRoutes);
 app.route('/', adminRoutes);
 app.route('/', apiFinderRoutes);
 app.route('/', authRoutes);
 app.route('/', dashboardRoutes);
 app.route('/', apiDashboardRoutes);
-app.route('/', telegramWebhookRoutes);
 
 // Health check route
 app.get('/', (c) => {
