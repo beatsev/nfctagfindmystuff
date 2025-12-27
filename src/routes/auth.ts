@@ -10,14 +10,14 @@ import { rateLimitMiddleware } from '../middleware/rate-limit';
 
 const app = new Hono<{ Bindings: Env }>();
 
-// Validation schemas
+// Validation schemas with email normalization
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email(),
 });
 
 const signupSchema = z.object({
-  email: z.string().email(),
-  name: z.string().min(1).max(100),
+  email: z.string().trim().toLowerCase().email(),
+  name: z.string().min(1).max(100).trim(),
   token: z.string().uuid(),
 });
 
@@ -29,15 +29,15 @@ app.get('/login', (c) => {
 // POST /api/auth/login - Send magic link via Telegram
 app.post(
   '/api/auth/login',
-  rateLimitMiddleware(5, 300), // 5 login attempts per 5 minutes
+  rateLimitMiddleware(10, 300), // 10 login attempts per 5 minutes (more lenient for testing)
   zValidator('form', loginSchema),
   async (c) => {
     const { email } = c.req.valid('form');
 
     try {
-      // Look up user by email
+      // Look up user by email (case-insensitive)
       const user = await c.env.DB.prepare(
-        'SELECT id, email, telegram_chat_id, name FROM users WHERE email = ?'
+        'SELECT id, email, telegram_chat_id, name FROM users WHERE LOWER(email) = ?'
       ).bind(email).first();
 
       if (!user) {
@@ -62,8 +62,8 @@ app.post(
 
       const magicLink = `${c.env.DOMAIN}/api/auth/verify?token=${token}`;
 
-      // Send magic link via Telegram
-      const message = `🔐 *Dashboard Login*\n\nClick the link below to access your dashboard:\n\n${magicLink}\n\n⏰ This link expires in 15 minutes.\n\n_If you didn't request this, please ignore this message._`;
+      // Send magic link via Telegram (using HTML for better URL compatibility)
+      const message = `🔐 <b>Dashboard Login</b>\n\nClick the link below to access your dashboard:\n\n${magicLink}\n\n⏰ This link expires in 15 minutes.\n\n<i>If you didn't request this, please ignore this message.</i>`;
 
       const response = await fetch(
         `https://api.telegram.org/bot${c.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
@@ -73,7 +73,7 @@ app.post(
           body: JSON.stringify({
             chat_id: user.telegram_chat_id,
             text: message,
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
           }),
         }
       );
@@ -117,9 +117,9 @@ app.get('/api/auth/verify', async (c) => {
       }));
     }
 
-    // Look up user
+    // Look up user (case-insensitive)
     const user = await c.env.DB.prepare(
-      'SELECT id, email, name FROM users WHERE email = ?'
+      'SELECT id, email, name FROM users WHERE LOWER(email) = LOWER(?)'
     ).bind(payload.email).first();
 
     if (!user) {
@@ -198,9 +198,9 @@ app.post(
         }, 400);
       }
 
-      // Check if email already exists
+      // Check if email already exists (case-insensitive)
       const existingUser = await c.env.DB.prepare(
-        'SELECT id FROM users WHERE email = ?'
+        'SELECT id FROM users WHERE LOWER(email) = ?'
       ).bind(email).first();
 
       if (existingUser) {

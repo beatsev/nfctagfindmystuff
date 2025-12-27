@@ -3,6 +3,7 @@ export interface DashboardPageProps {
   userEmail: string;
   objects: any[];
   unreadMessages: number;
+  currentFilter?: string;
 }
 
 export function renderDashboardPage(props: DashboardPageProps): string {
@@ -158,6 +159,42 @@ export function renderDashboardPage(props: DashboardPageProps): string {
       </button>
     </div>
 
+    <!-- Status Filter Dropdown -->
+    <div style="margin-bottom: 24px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+      <label for="status-filter" style="font-weight: 500; color: #666;">
+        Filter:
+      </label>
+      <select
+        id="status-filter"
+        onchange="window.location.href = '/dashboard' + (this.value !== 'all' ? '?status=' + this.value : '')"
+        style="padding: 10px 16px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; background: white; cursor: pointer; min-width: 150px; font-family: inherit;"
+      >
+        <option value="all" ${(!props.currentFilter || props.currentFilter === 'all') ? 'selected' : ''}>
+          All Objects
+        </option>
+        <option value="active" ${props.currentFilter === 'active' ? 'selected' : ''}>
+          Active
+        </option>
+        <option value="lost" ${props.currentFilter === 'lost' ? 'selected' : ''}>
+          Lost
+        </option>
+        <option value="recovered" ${props.currentFilter === 'recovered' ? 'selected' : ''}>
+          Recovered
+        </option>
+      </select>
+
+      ${props.currentFilter && props.currentFilter !== 'all' ? `
+        <a
+          href="/dashboard"
+          style="color: #667eea; text-decoration: none; font-size: 13px; padding: 8px 12px; background: #f5f5f5; border-radius: 6px; transition: background 0.2s;"
+          onmouseover="this.style.background='#eeeeee'"
+          onmouseout="this.style.background='#f5f5f5'"
+        >
+          Clear filter
+        </a>
+      ` : ''}
+    </div>
+
     ${props.objects.length === 0 ? `
       <div class="empty-state">
         <div style="font-size: 48px; margin-bottom: 16px;">📦</div>
@@ -176,8 +213,23 @@ export function renderDashboardPage(props: DashboardPageProps): string {
     ` : `
       <div class="objects-grid">
         ${props.objects.map(obj => `
-          <a href="/dashboard/objects/${obj.id}" style="text-decoration: none; color: inherit;">
-            <div class="object-card">
+          <div class="object-card" style="position: relative;">
+            <!-- Edit button (top-right corner) -->
+            <button
+              hx-get="/dashboard/objects/${obj.id}/edit"
+              hx-target="#modal-container"
+              hx-swap="innerHTML"
+              onclick="event.stopPropagation()"
+              style="position: absolute; top: 16px; right: 16px; background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px; font-weight: 500; color: #666; transition: all 0.2s; z-index: 10;"
+              onmouseover="this.style.background='#667eea'; this.style.color='white'; this.style.borderColor='#667eea'"
+              onmouseout="this.style.background='#f5f5f5'; this.style.color='#666'; this.style.borderColor='#e0e0e0'"
+              title="Edit object"
+            >
+              ✏️ Edit
+            </button>
+
+            <!-- Clickable area (exclude edit button) -->
+            <a href="/dashboard/objects/${obj.id}" style="text-decoration: none; color: inherit; display: block; padding-right: 80px;">
               <h3>${escapeHtml(obj.name)}</h3>
               ${obj.description ? `<p>${escapeHtml(obj.description)}</p>` : ''}
               <span class="status-badge status-${obj.status}">${obj.status}</span>
@@ -186,8 +238,8 @@ export function renderDashboardPage(props: DashboardPageProps): string {
                 <span>👁️ ${obj.scan_count} scan${obj.scan_count !== 1 ? 's' : ''}</span>
               </div>
               ${obj.last_scan ? `<p style="font-size: 12px; color: #999; margin-top: 8px;">Last seen: ${formatDate(obj.last_scan)}</p>` : ''}
-            </div>
-          </a>
+            </a>
+          </div>
         `).join('')}
       </div>
     `}
