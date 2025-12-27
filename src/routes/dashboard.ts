@@ -16,12 +16,24 @@ app.use('*', authMiddleware());
 app.get('/dashboard', async (c) => {
   const user = c.get('user') as SessionPayload;
 
+  // Get status filter from query parameter
+  const statusFilter = c.req.query('status');
+
   // Fetch user details
   const userData = await c.env.DB.prepare(
     'SELECT name FROM users WHERE id = ?'
   ).bind(user.userId).first();
 
-  // Fetch user's objects with stats
+  // Build dynamic WHERE clause for status filtering
+  let whereClause = 'o.user_id = ?';
+  const bindings: any[] = [user.userId];
+
+  if (statusFilter && ['active', 'lost', 'recovered'].includes(statusFilter)) {
+    whereClause += ' AND o.status = ?';
+    bindings.push(statusFilter);
+  }
+
+  // Fetch user's objects with stats, sorted by status priority (lost > recovered > active)
   const objects = await c.env.DB.prepare(`
     SELECT
       o.id,
@@ -36,10 +48,16 @@ app.get('/dashboard', async (c) => {
     FROM objects o
     LEFT JOIN tags t ON t.object_id = o.id AND t.active = 1
     LEFT JOIN scan_events se ON se.object_id = o.id
-    WHERE o.user_id = ?
+    WHERE ${whereClause}
     GROUP BY o.id
-    ORDER BY o.created_at DESC
-  `).bind(user.userId).all();
+    ORDER BY
+      CASE o.status
+        WHEN 'lost' THEN 1
+        WHEN 'recovered' THEN 2
+        ELSE 3
+      END,
+      o.created_at DESC
+  `).bind(...bindings).all();
 
   // Count unread messages (placeholder - all messages for now)
   const messageCount = await c.env.DB.prepare(`
@@ -54,6 +72,7 @@ app.get('/dashboard', async (c) => {
     userEmail: user.email,
     objects: objects.results,
     unreadMessages: (messageCount?.count as number) || 0,
+    currentFilter: statusFilter || 'all',
   }));
 });
 
@@ -83,12 +102,12 @@ app.get('/dashboard/objects/new', (c) => {
 
           <div style="margin-bottom: 16px;">
             <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">
-              Description (optional)
+              Message to Finder (optional)
             </label>
             <textarea
               name="description"
               rows="3"
-              placeholder="Add details to help identify this item"
+              placeholder="e.g., 'If found, please contact me via the button below. Reward offered!' This message will be shown to anyone who scans this tag."
               style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; box-sizing: border-box; font-family: inherit;"
             ></textarea>
           </div>
@@ -107,6 +126,95 @@ app.get('/dashboard/objects/new', (c) => {
               style="flex: 1; padding: 12px; font-size: 16px;"
             >
               Create Object
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `);
+});
+
+// GET /dashboard/objects/:id/edit - Show edit object form modal
+app.get('/dashboard/objects/:id/edit', async (c) => {
+  const user = c.get('user') as SessionPayload;
+  const objectId = c.req.param('id');
+
+  // Fetch object and verify ownership
+  const object = await c.env.DB.prepare(
+    'SELECT * FROM objects WHERE id = ? AND user_id = ?'
+  ).bind(objectId, user.userId).first();
+
+  if (!object) {
+    return c.html(`
+      <div style="color: #f44336; padding: 12px; background: #ffebee; border-radius: 8px;">
+        Object not found or access denied
+      </div>
+    `);
+  }
+
+  return c.html(`
+    <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+      <div style="background: white; border-radius: 12px; padding: 32px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
+        <h2 style="margin: 0 0 24px 0; font-size: 24px; color: #333;">Edit Object</h2>
+        <form
+          hx-patch="/api/objects/${objectId}"
+          hx-target="#modal-container"
+          hx-swap="innerHTML"
+        >
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">
+              Object Name <span style="color: #f44336;">*</span>
+            </label>
+            <input
+              type="text"
+              name="name"
+              required
+              value="${escapeHtml(object.name as string)}"
+              placeholder="e.g., Laptop Bag, Car Keys"
+              style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; box-sizing: border-box; font-family: inherit;"
+            >
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">
+              Message to Finder (optional)
+            </label>
+            <textarea
+              name="description"
+              rows="3"
+              placeholder="e.g., 'If found, please contact me via the button below. Reward offered!' This message will be shown to anyone who scans this tag."
+              style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; box-sizing: border-box; font-family: inherit;"
+            >${object.description ? escapeHtml(object.description as string) : ''}</textarea>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">
+              Status
+            </label>
+            <select
+              name="status"
+              style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: white; cursor: pointer; font-family: inherit;"
+            >
+              <option value="active" ${object.status === 'active' ? 'selected' : ''}>Active</option>
+              <option value="lost" ${object.status === 'lost' ? 'selected' : ''}>Lost</option>
+              <option value="recovered" ${object.status === 'recovered' ? 'selected' : ''}>Recovered</option>
+            </select>
+          </div>
+
+          <div style="display: flex; gap: 12px; margin-top: 24px;">
+            <button
+              type="button"
+              onclick="document.getElementById('modal-container').innerHTML = ''"
+              style="flex: 1; padding: 12px; background: #f5f5f5; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: 500; color: #666;"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="cta-button"
+              style="flex: 1; padding: 12px; font-size: 16px;"
+            >
+              Save Changes
             </button>
           </div>
         </form>
@@ -327,12 +435,25 @@ app.get('/dashboard/objects/:id', async (c) => {
 
   <div class="main-content">
     <div style="background: white; border-radius: 12px; padding: 32px; margin-bottom: 24px;">
-      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
-        <div>
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px; gap: 16px;">
+        <div style="flex: 1;">
           <h1 style="margin: 0; font-size: 32px; color: #333;">${escapeHtml(object.name as string)}</h1>
           ${object.description ? `<p style="color: #666; margin: 8px 0 0 0;">${escapeHtml(object.description as string)}</p>` : ''}
+          <div style="margin-top: 12px;">
+            <span class="status-badge status-${object.status}">${object.status}</span>
+          </div>
         </div>
-        <span class="status-badge status-${object.status}">${object.status}</span>
+
+        <button
+          hx-get="/dashboard/objects/${objectId}/edit"
+          hx-target="#modal-container"
+          hx-swap="innerHTML"
+          style="background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 20px; cursor: pointer; font-size: 14px; font-weight: 500; color: #666; transition: all 0.2s; white-space: nowrap; flex-shrink: 0;"
+          onmouseover="this.style.background='#667eea'; this.style.color='white'; this.style.borderColor='#667eea'"
+          onmouseout="this.style.background='#f5f5f5'; this.style.color='#666'; this.style.borderColor='#e0e0e0'"
+        >
+          ✏️ Edit
+        </button>
       </div>
     </div>
 
@@ -378,9 +499,6 @@ app.get('/dashboard/objects/:id', async (c) => {
                 style="font-size: 11px; padding: 4px 8px; white-space: nowrap;">
                 💾 Download
               </button>
-              <span class="tag-status ${tag.active ? 'active' : 'inactive'}">
-                ${tag.active ? 'Active' : 'Inactive'}
-              </span>
             </div>
           </div>
         `).join('')}

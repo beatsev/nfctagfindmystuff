@@ -11,6 +11,9 @@ A serverless web application for tracking lost items via NFC tags. When someone 
 ✅ **Finder Messages** - Anonymous communication between finders and owners
 ✅ **Location Sharing** - GPS coordinates with finder consent
 ✅ **Dashboard** - Manage objects, tags, and view scan history
+✅ **Object Editing** - Update object names, descriptions, and status via modal forms
+✅ **Smart Filtering** - Filter objects by status (Active/Lost/Recovered)
+✅ **Priority Sorting** - Lost items automatically appear first in dashboard
 ✅ **Map Visualization** - See where your items have been scanned
 ✅ **Privacy First** - IP hashing, optional contact sharing
 ✅ **Serverless** - Built on Cloudflare Workers (edge-native, global)
@@ -226,19 +229,21 @@ nfctagfindmystuff/
 
 ### Dashboard (Auth Required)
 
-- `GET /dashboard` - Objects list
+- `GET /dashboard` - Objects list with status filtering (`?status=lost`)
+- `GET /dashboard/objects/new` - Create object modal
 - `GET /dashboard/objects/:id` - Object detail with tabs
+- `GET /dashboard/objects/:id/edit` - Edit object modal
 - `GET /dashboard/messages` - Messages inbox
-- `POST /dashboard/objects` - Create object
+- `POST /dashboard/objects` - Create object (HTMX form)
 - `POST /dashboard/objects/:id/tags` - Add tag
 
 ### Dashboard API (Auth Required)
 
 - `GET /api/objects` - List objects
 - `POST /api/objects` - Create object
-- `PATCH /api/objects/:id` - Update object
+- `PATCH /api/objects/:id` - Update object (name, description, status)
 - `POST /api/tags` - Create tag
-- `PATCH /api/tags/:tagId` - Update tag
+- `PATCH /api/tags/:tagId` - Toggle tag active status
 - `GET /api/tags/:tagId/scans` - Scan history
 - `GET /api/messages` - Finder messages
 

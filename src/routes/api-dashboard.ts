@@ -128,69 +128,79 @@ app.get('/api/objects/:id', async (c) => {
 });
 
 // PATCH /api/objects/:id - Update object
-app.patch(
-  '/api/objects/:id',
-  zValidator('json', updateObjectSchema),
-  async (c) => {
-    const user = c.get('user') as SessionPayload;
-    const objectId = c.req.param('id');
-    const data = c.req.valid('json');
+app.patch('/api/objects/:id', async (c) => {
+  const user = c.get('user') as SessionPayload;
+  const objectId = c.req.param('id');
 
-    try {
-      // Verify ownership
-      const object = await c.env.DB.prepare(
-        'SELECT id FROM objects WHERE id = ? AND user_id = ?'
-      ).bind(objectId, user.userId).first();
+  // Parse form data from HTMX form submission
+  const formData = await c.req.parseBody();
+  const name = formData.name as string | undefined;
+  const description = formData.description as string | undefined;
+  const status = formData.status as string | undefined;
 
-      if (!object) {
-        return c.json({ error: 'Object not found' }, 404);
-      }
+  try {
+    // Verify ownership
+    const object = await c.env.DB.prepare(
+      'SELECT id FROM objects WHERE id = ? AND user_id = ?'
+    ).bind(objectId, user.userId).first();
 
-      // Build dynamic UPDATE query
-      const updates: string[] = [];
-      const values: any[] = [];
-
-      if (data.name !== undefined) {
-        updates.push('name = ?');
-        values.push(data.name);
-      }
-      if (data.description !== undefined) {
-        updates.push('description = ?');
-        values.push(data.description);
-      }
-      if (data.photo_url !== undefined) {
-        updates.push('photo_url = ?');
-        values.push(data.photo_url);
-      }
-      if (data.status !== undefined) {
-        updates.push('status = ?');
-        values.push(data.status);
-      }
-
-      if (updates.length === 0) {
-        return c.json({ error: 'No fields to update' }, 400);
-      }
-
-      values.push(objectId);
-
-      await c.env.DB.prepare(`
-        UPDATE objects
-        SET ${updates.join(', ')}
-        WHERE id = ?
-      `).bind(...values).run();
-
-      // Fetch updated object
-      const updated = await c.env.DB.prepare(
-        'SELECT * FROM objects WHERE id = ?'
-      ).bind(objectId).first();
-
-      return c.json({ object: updated });
-    } catch (error) {
-      console.error('Error updating object:', error);
-      return c.json({ error: 'Failed to update object' }, 500);
+    if (!object) {
+      return c.html(`
+        <div style="color: #f44336; padding: 12px; background: #ffebee; border-radius: 8px;">
+          Object not found or access denied
+        </div>
+      `);
     }
+
+    // Build dynamic UPDATE query
+    const updates: string[] = [];
+    const values: any[] = [];
+
+    if (name !== undefined && name.trim().length > 0) {
+      updates.push('name = ?');
+      values.push(name);
+    }
+    if (description !== undefined) {
+      updates.push('description = ?');
+      values.push(description || '');
+    }
+    if (status !== undefined && ['active', 'lost', 'recovered'].includes(status)) {
+      updates.push('status = ?');
+      values.push(status);
+    }
+
+    if (updates.length === 0) {
+      return c.html(`
+        <div style="color: #f44336; padding: 12px; background: #ffebee; border-radius: 8px;">
+          No valid fields to update
+        </div>
+      `);
+    }
+
+    values.push(objectId);
+
+    await c.env.DB.prepare(`
+      UPDATE objects
+      SET ${updates.join(', ')}
+      WHERE id = ?
+    `).bind(...values).run();
+
+    // Return HTMX-compatible response that closes modal and reloads page
+    return c.html(`
+      <script>
+        document.getElementById('modal-container').innerHTML = '';
+        window.location.reload();
+      </script>
+    `);
+  } catch (error) {
+    console.error('Error updating object:', error);
+    return c.html(`
+      <div style="color: #f44336; padding: 12px; background: #ffebee; border-radius: 8px;">
+        Failed to update object. Please try again.
+      </div>
+    `);
   }
-);
+});
 
 // POST /api/tags - Create/link new tag to object
 app.post(
