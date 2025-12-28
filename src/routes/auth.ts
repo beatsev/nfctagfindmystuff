@@ -8,6 +8,62 @@ import { renderSignupPage, renderSignupErrorPage } from '../views/signup-page';
 import { createMagicLinkToken, verifyMagicLinkToken, createSessionToken } from '../lib/jwt';
 import { rateLimitMiddleware } from '../middleware/rate-limit';
 
+/**
+ * Sleep for a specified number of milliseconds
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Retry fetch with exponential backoff
+ */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  maxRetries = 3
+): Promise<Response> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      if (response.ok) {
+        if (attempt > 1) {
+          console.log(`✅ Telegram API succeeded on attempt ${attempt}`);
+        }
+        return response;
+      }
+
+      // Client errors (4xx) - don't retry
+      if (response.status >= 400 && response.status < 500) {
+        console.error(`❌ Telegram API client error ${response.status}, not retrying`);
+        return response;
+      }
+
+      // Server errors (5xx) or rate limit (429) - retry
+      if (attempt < maxRetries) {
+        const waitTime = Math.pow(2, attempt) * 1000;
+        console.warn(`⚠️ Telegram API attempt ${attempt} failed (${response.status}), retrying in ${waitTime}ms...`);
+        await sleep(waitTime);
+      } else {
+        console.error(`❌ Telegram API failed after ${maxRetries} attempts (${response.status})`);
+        return response;
+      }
+    } catch (error) {
+      if (attempt < maxRetries) {
+        const waitTime = Math.pow(2, attempt) * 1000;
+        console.warn(`⚠️ Telegram API network error on attempt ${attempt}, retrying in ${waitTime}ms...`);
+        await sleep(waitTime);
+      } else {
+        console.error(`❌ Telegram API network error after ${maxRetries} attempts`);
+        throw error;
+      }
+    }
+  }
+
+  throw new Error('Unexpected: retry loop completed without return');
+}
+
 const app = new Hono<{ Bindings: Env }>();
 
 // Validation schemas with email normalization
@@ -65,7 +121,7 @@ app.post(
       // Send magic link via Telegram (using HTML for better URL compatibility)
       const message = `🔐 <b>Dashboard Login</b>\n\nClick the link below to access your dashboard:\n\n${magicLink}\n\n⏰ This link expires in 15 minutes.\n\n<i>If you didn't request this, please ignore this message.</i>`;
 
-      const response = await fetch(
+      const response = await fetchWithRetry(
         `https://api.telegram.org/bot${c.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
         {
           method: 'POST',
@@ -75,7 +131,8 @@ app.post(
             text: message,
             parse_mode: 'HTML',
           }),
-        }
+        },
+        3 // 3 retry attempts
       );
 
       if (!response.ok) {

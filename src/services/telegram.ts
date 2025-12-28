@@ -11,6 +11,69 @@ export interface NotificationPayload {
 }
 
 /**
+ * Sleep for a specified number of milliseconds
+ * @param ms - Milliseconds to sleep
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Retry fetch with exponential backoff
+ * @param url - URL to fetch
+ * @param options - Fetch options
+ * @param maxRetries - Maximum number of retry attempts (default 3)
+ * @returns Response object
+ */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  maxRetries = 3
+): Promise<Response> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      // Success - return immediately
+      if (response.ok) {
+        if (attempt > 1) {
+          console.log(`✅ Telegram API succeeded on attempt ${attempt}`);
+        }
+        return response;
+      }
+
+      // Client errors (4xx) - don't retry, these are permanent
+      if (response.status >= 400 && response.status < 500) {
+        console.error(`❌ Telegram API client error ${response.status}, not retrying`);
+        return response;
+      }
+
+      // Server errors (5xx) or rate limit (429) - retry with backoff
+      if (attempt < maxRetries) {
+        const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+        console.warn(`⚠️ Telegram API attempt ${attempt} failed (${response.status}), retrying in ${waitTime}ms...`);
+        await sleep(waitTime);
+      } else {
+        console.error(`❌ Telegram API failed after ${maxRetries} attempts (${response.status})`);
+        return response;
+      }
+    } catch (error) {
+      // Network errors, timeouts, etc.
+      if (attempt < maxRetries) {
+        const waitTime = Math.pow(2, attempt) * 1000;
+        console.warn(`⚠️ Telegram API network error on attempt ${attempt}, retrying in ${waitTime}ms...`);
+        await sleep(waitTime);
+      } else {
+        console.error(`❌ Telegram API network error after ${maxRetries} attempts`);
+        throw error;
+      }
+    }
+  }
+
+  throw new Error('Unexpected: retry loop completed without return');
+}
+
+/**
  * Escape special characters for Telegram Markdown
  * @param text - Text to escape
  * @returns Escaped text
@@ -59,9 +122,9 @@ export async function sendTelegramNotification(
 
   message += `\n🔗 [View Dashboard](${env.DOMAIN}/dashboard)`;
 
-  // Send via Telegram Bot API
+  // Send via Telegram Bot API with retry logic
   try {
-    const response = await fetch(
+    const response = await fetchWithRetry(
       `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,
       {
         method: 'POST',
@@ -72,7 +135,8 @@ export async function sendTelegramNotification(
           parse_mode: 'Markdown',
           disable_web_page_preview: true,
         }),
-      }
+      },
+      3 // 3 retry attempts
     );
 
     const status = response.ok ? 'sent' : 'failed';
