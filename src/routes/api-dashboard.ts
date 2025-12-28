@@ -5,6 +5,7 @@ import { ulid } from 'ulid';
 import type { Env } from '../types/env';
 import { apiAuthMiddleware } from '../middleware/auth';
 import type { SessionPayload } from '../lib/jwt';
+import { invalidateTagCache } from '../services/tag-lookup';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -184,6 +185,16 @@ app.patch('/api/objects/:id', async (c) => {
       SET ${updates.join(', ')}
       WHERE id = ?
     `).bind(...values).run();
+
+    // Invalidate cache for all tags associated with this object
+    const tags = await c.env.DB.prepare(
+      'SELECT id FROM tags WHERE object_id = ?'
+    ).bind(objectId).all();
+
+    // Invalidate each tag's cache
+    for (const tag of tags.results) {
+      await invalidateTagCache(tag.id as string, c.env);
+    }
 
     // Return HTMX-compatible response that closes modal and reloads page
     return c.html(`
