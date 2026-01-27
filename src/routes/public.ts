@@ -4,6 +4,7 @@ import { lookupTag } from '../services/tag-lookup';
 import { logScanEvent } from '../services/scan-event';
 import { sendTelegramNotification } from '../services/telegram';
 import { renderLandingPage } from '../views/landing-page';
+import { landingPageStyles } from '../views/landing-styles';
 import { rateLimitMiddleware } from '../middleware/rate-limit';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -12,8 +13,8 @@ const app = new Hono<{ Bindings: Env }>();
 app.get('/t/:tagId', rateLimitMiddleware(10, 60), async (c) => {
   const tagId = c.req.param('tagId');
 
-  // 1. Lookup tag (KV + D1 cache)
-  const tagData = await lookupTag(tagId, c.env);
+  // 1. Lookup tag (KV + D1 cache, non-blocking KV backfill)
+  const tagData = await lookupTag(tagId, c.env, c.executionCtx);
 
   if (!tagData) {
     return c.html(`<!DOCTYPE html>
@@ -22,9 +23,9 @@ app.get('/t/:tagId', rateLimitMiddleware(10, 60), async (c) => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tag Not Found</title>
-  <link rel="stylesheet" href="/styles.css">
+  <style>${landingPageStyles}</style>
 </head>
-<body>
+<body class="landing-page">
   <div class="container">
     <div class="card">
       <div class="icon">❌</div>
@@ -44,38 +45,42 @@ app.get('/t/:tagId', rateLimitMiddleware(10, 60), async (c) => {
   const ipAddress = c.req.header('CF-Connecting-IP') || null;
   const userAgent = c.req.header('User-Agent') || null;
 
-  // 3. Log scan event
-  const scanEventId = await logScanEvent({
-    tagId: tagData.tagId,
-    objectId: tagData.objectId,
-    ipAddress,
-    userAgent,
-    city: cf?.city || null,
-    region: cf?.region || null,
-    country: cf?.country || null,
-  }, c.env);
+  // 3. Generate scan event UUID upfront so we can return the response
+  //    immediately without waiting for the D1 INSERT.
+  const scanEventUuid = crypto.randomUUID();
 
-  // 4. Send Telegram notification (async, non-blocking)
   const approxLocation = [cf?.city, cf?.region, cf?.country]
     .filter(Boolean)
     .join(', ') || null;
 
+  // 4. Defer scan event INSERT + notification to background (non-blocking)
   c.executionCtx.waitUntil(
-    sendTelegramNotification({
-      userId: tagData.userId,
-      objectName: tagData.objectName,
+    logScanEvent({
+      uuid: scanEventUuid,
       tagId: tagData.tagId,
-      scanEventId,
-      approxLocation,
-      hasMessage: false,
-    }, c.env)
+      objectId: tagData.objectId,
+      ipAddress,
+      userAgent,
+      city: cf?.city || null,
+      region: cf?.region || null,
+      country: cf?.country || null,
+    }, c.env).then((scanEventId) =>
+      sendTelegramNotification({
+        userId: tagData.userId,
+        objectName: tagData.objectName,
+        tagId: tagData.tagId,
+        scanEventId,
+        approxLocation,
+        hasMessage: false,
+      }, c.env)
+    ).catch((err) => console.error('Background scan/notification error:', err))
   );
 
-  // 5. Render landing page
+  // 5. Render landing page immediately (only waited for tag lookup)
   const html = renderLandingPage({
     objectName: tagData.objectName,
     description: tagData.objectDescription,
-    scanEventId,
+    scanEventId: scanEventUuid,
     tagId,
   });
 

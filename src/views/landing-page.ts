@@ -1,7 +1,9 @@
+import { landingPageStyles } from './landing-styles';
+
 export interface LandingPageProps {
   objectName: string;
   description: string | null;
-  scanEventId: number;
+  scanEventId: number | string;
   tagId: string;
 }
 
@@ -23,8 +25,8 @@ export function renderLandingPage(props: LandingPageProps): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lost Item Found - ${escapeHtml(props.objectName)}</title>
-  <link rel="stylesheet" href="/styles.css">
-  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <style>${landingPageStyles}</style>
+  <script defer src="https://unpkg.com/htmx.org@2.0.4"></script>
 </head>
 <body class="landing-page">
   <div class="container">
@@ -112,7 +114,7 @@ export function renderLandingPage(props: LandingPageProps): string {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              scan_event_id: ${props.scanEventId},
+              scan_event_id: "${props.scanEventId}",
               lat: position.coords.latitude,
               lng: position.coords.longitude
             })

@@ -14,11 +14,13 @@ export interface TagData {
  * Look up tag data with KV cache + D1 fallback
  * @param tagId - The tag ID to look up
  * @param env - Cloudflare environment bindings
+ * @param ctx - Optional execution context for non-blocking KV backfill
  * @returns TagData if found, null otherwise
  */
 export async function lookupTag(
   tagId: string,
-  env: Env
+  env: Env,
+  ctx?: ExecutionContext
 ): Promise<TagData | null> {
   // 1. Check KV cache first
   const cached = await env.TAGS_KV.get(`tag:${tagId}`, 'json');
@@ -55,12 +57,15 @@ export async function lookupTag(
     active: Boolean(result.active),
   };
 
-  // 3. Backfill KV cache with 24-hour TTL
-  await env.TAGS_KV.put(
+  // 3. Backfill KV cache with 24-hour TTL (non-blocking)
+  const kvBackfill = env.TAGS_KV.put(
     `tag:${tagId}`,
     JSON.stringify(tagData),
     { expirationTtl: 86400 } // 24 hours
   );
+  if (ctx) {
+    ctx.waitUntil(kvBackfill);
+  }
 
   return tagData;
 }

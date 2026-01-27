@@ -1,0 +1,480 @@
+/**
+ * Inline CSS for the landing page.
+ * Eliminates render-blocking stylesheet request - the browser can paint
+ * immediately on first byte instead of waiting for a second HTTP request.
+ */
+export const landingPageStyles = `
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.6;
+  color: #1f2937;
+}
+
+body.landing-page {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.container {
+  max-width: 640px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.card {
+  background: white;
+  border-radius: 1.5rem;
+  padding: 2.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.icon {
+  font-size: 5rem;
+  text-align: center;
+  margin-bottom: 1.25rem;
+  animation: bounce 0.6s ease-in-out;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+h1 {
+  font-size: 1.875rem;
+  font-weight: 800;
+  text-align: center;
+  background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+  margin-top: 0.5rem;
+  letter-spacing: -0.5px;
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  color: #1f2937;
+  margin-bottom: 1.25rem;
+  line-height: 1.3;
+}
+
+h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.description {
+  text-align: center;
+  color: #6b7280;
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.section {
+  margin: 2rem 0;
+  padding: 2rem;
+  background: linear-gradient(to bottom, #f9fafb, #ffffff);
+  border-radius: 1rem;
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s ease;
+}
+
+.section:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.message-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+textarea {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+  transition: all 0.3s ease;
+  background: #fafafa;
+  min-height: 120px;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #7c3aed;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: #fafafa;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: #7c3aed;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
+
+button {
+  padding: 1rem 1.75rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+  position: relative;
+  overflow: hidden;
+}
+
+button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+button:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+button[type="submit"] {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  color: white;
+  width: 100%;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);
+}
+
+button[type="submit"]:hover {
+  background: linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.5);
+}
+
+button[type="submit"]:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);
+}
+
+.location-section {
+  margin: 2rem 0;
+  padding: 2.5rem 2rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 1rem;
+  text-align: center;
+  box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.3);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.3);
+  }
+  50% {
+    box-shadow: 0 10px 40px -5px rgba(16, 185, 129, 0.5);
+  }
+}
+
+.location-icon {
+  font-size: 3.5rem;
+  margin-bottom: 1rem;
+  animation: bounce 2s ease-in-out infinite;
+}
+
+.location-title {
+  color: white;
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.location-description {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 1.125rem;
+  margin-bottom: 1.75rem;
+  line-height: 1.6;
+}
+
+.location-btn {
+  background: white;
+  color: #059669;
+  font-size: 1.25rem;
+  font-weight: 700;
+  padding: 1.25rem 2.5rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.15);
+  width: 100%;
+  max-width: 400px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+.location-btn:hover:not(:disabled) {
+  background: #f0fdf4;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.2);
+}
+
+.location-btn:active:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.location-btn:disabled {
+  background: rgba(255, 255, 255, 0.8);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.location-btn.success {
+  background: #10b981;
+  color: white;
+  animation: successPulse 0.6s ease-out;
+}
+
+@keyframes successPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.location-btn.error {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.btn-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.btn-text {
+  line-height: 1;
+}
+
+.location-hint {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9375rem;
+  margin-top: 1rem;
+  font-style: italic;
+}
+
+.privacy {
+  margin-top: 2rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-left: 5px solid #f59e0b;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.privacy small {
+  color: #78350f;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.success-message {
+  text-align: center;
+  padding: 2.5rem;
+  background: linear-gradient(to bottom, #d1fae5, #a7f3d0);
+  border-radius: 1rem;
+  border: 2px solid #10b981;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+  animation: successPulse 0.5s ease-out;
+}
+
+.success-message p {
+  margin-bottom: 0.75rem;
+  color: #065f46;
+  font-size: 1.125rem;
+}
+
+.success-message p:last-child {
+  margin-bottom: 0;
+  font-size: 0.95rem;
+  color: #047857;
+}
+
+@media (max-width: 640px) {
+  body.landing-page {
+    padding: 1rem;
+  }
+
+  .container {
+    margin: 0;
+  }
+
+  .card {
+    padding: 1.75rem;
+    border-radius: 1rem;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+  }
+
+  h3 {
+    font-size: 1.125rem;
+  }
+
+  .icon {
+    font-size: 4rem;
+  }
+
+  .description {
+    font-size: 1rem;
+  }
+
+  .section {
+    padding: 1.5rem;
+    border-radius: 1rem;
+  }
+
+  .location-section {
+    padding: 2rem 1.5rem;
+  }
+
+  .location-icon {
+    font-size: 3rem;
+  }
+
+  .location-title {
+    font-size: 1.5rem;
+  }
+
+  .location-description {
+    font-size: 1rem;
+  }
+
+  .location-btn {
+    font-size: 1.125rem;
+    padding: 1.125rem 2rem;
+  }
+
+  .btn-icon {
+    font-size: 1.375rem;
+  }
+
+  button {
+    padding: 0.875rem 1.5rem;
+  }
+
+  .success-message {
+    padding: 2rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .card {
+    padding: 1.25rem;
+  }
+
+  h1 {
+    font-size: 1.375rem;
+  }
+
+  h2 {
+    font-size: 1.125rem;
+  }
+
+  .section {
+    padding: 1.25rem;
+  }
+
+  .location-section {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .location-icon {
+    font-size: 2.5rem;
+  }
+
+  .location-title {
+    font-size: 1.25rem;
+  }
+
+  .location-btn {
+    font-size: 1rem;
+    padding: 1rem 1.5rem;
+  }
+}
+`;
