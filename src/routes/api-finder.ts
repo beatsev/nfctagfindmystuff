@@ -8,15 +8,15 @@ import { rateLimitMiddleware } from '../middleware/rate-limit';
 
 const app = new Hono<{ Bindings: Env }>();
 
-// Validation schemas
+// Validation schemas - scan_event_id accepts UUID string or legacy integer ID
 const messageSchema = z.object({
-  scan_event_id: z.coerce.number().int().positive(),
+  scan_event_id: z.string().min(1),
   message: z.string().min(1).max(1000),
   contact: z.string().max(200).optional(),
 });
 
 const locationSchema = z.object({
-  scan_event_id: z.coerce.number().int().positive(),
+  scan_event_id: z.string().min(1),
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
 });
@@ -31,10 +31,13 @@ app.post(
     const { scan_event_id, message, contact } = c.req.valid('form');
 
     try {
-      // Verify scan event belongs to this tag
+      // Verify scan event belongs to this tag (lookup by UUID or legacy integer ID)
+      const isUuid = scan_event_id.includes('-');
       const scanEvent = await c.env.DB.prepare(
-        'SELECT object_id, tag_id FROM scan_events WHERE id = ?'
-      ).bind(scan_event_id).first();
+        isUuid
+          ? 'SELECT id, object_id, tag_id FROM scan_events WHERE uuid = ?'
+          : 'SELECT id, object_id, tag_id FROM scan_events WHERE id = ?'
+      ).bind(isUuid ? scan_event_id : Number(scan_event_id)).first();
 
       if (!scanEvent || scanEvent.tag_id !== tagId) {
         return c.html(`
@@ -61,13 +64,14 @@ app.post(
         `, 404);
       }
 
-      // Insert message
+      // Insert message using the integer scan event ID
+      const scanEventIntId = scanEvent.id as number;
       await c.env.DB.prepare(`
         INSERT INTO finder_messages
         (scan_event_id, tag_id, object_id, message, contact)
         VALUES (?, ?, ?, ?, ?)
       `).bind(
-        scan_event_id,
+        scanEventIntId,
         tagId,
         scanEvent.object_id,
         message,
@@ -80,7 +84,7 @@ app.post(
           userId: objectData.user_id as string,
           objectName: objectData.name as string,
           tagId,
-          scanEventId: scan_event_id,
+          scanEventId: scanEventIntId,
           approxLocation: null,
           hasMessage: true,
           messagePreview: message.substring(0, 100),
@@ -116,17 +120,20 @@ app.post(
     const { scan_event_id, lat, lng } = c.req.valid('json');
 
     try {
-      // Verify scan event belongs to this tag
+      // Verify scan event belongs to this tag (lookup by UUID or legacy integer ID)
+      const isUuid = scan_event_id.includes('-');
       const scanEvent = await c.env.DB.prepare(
-        'SELECT tag_id FROM scan_events WHERE id = ?'
-      ).bind(scan_event_id).first();
+        isUuid
+          ? 'SELECT id, tag_id FROM scan_events WHERE uuid = ?'
+          : 'SELECT id, tag_id FROM scan_events WHERE id = ?'
+      ).bind(isUuid ? scan_event_id : Number(scan_event_id)).first();
 
       if (!scanEvent || scanEvent.tag_id !== tagId) {
         return c.json({ error: 'Invalid scan event' }, 400);
       }
 
-      // Update scan event with location
-      await updateScanEventLocation(scan_event_id, lat, lng, c.env);
+      // Update scan event with location using the integer ID
+      await updateScanEventLocation(scanEvent.id as number, lat, lng, c.env);
 
       return c.json({
         success: true,
