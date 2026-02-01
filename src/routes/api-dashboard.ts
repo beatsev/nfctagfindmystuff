@@ -35,6 +35,28 @@ const createTagSchema = z.object({
 // GET /api/objects - List all objects for authenticated user
 app.get('/api/objects', async (c) => {
   const user = c.get('user') as SessionPayload;
+  const sortBy = c.req.query('sort') || 'recent_scan';
+
+  // Build ORDER BY clause based on sort parameter
+  let orderByClause: string;
+  switch (sortBy) {
+    case 'status':
+      orderByClause = `
+        CASE o.status
+          WHEN 'lost' THEN 1
+          WHEN 'recovered' THEN 2
+          ELSE 3
+        END,
+        o.created_at DESC`;
+      break;
+    case 'created':
+      orderByClause = 'o.created_at DESC';
+      break;
+    case 'recent_scan':
+    default:
+      orderByClause = 'COALESCE(MAX(se.ts), o.created_at) DESC';
+      break;
+  }
 
   try {
     const objects = await c.env.DB.prepare(`
@@ -53,7 +75,7 @@ app.get('/api/objects', async (c) => {
       LEFT JOIN scan_events se ON se.object_id = o.id
       WHERE o.user_id = ?
       GROUP BY o.id
-      ORDER BY o.created_at DESC
+      ORDER BY ${orderByClause}
     `).bind(user.userId).all();
 
     return c.json({ objects: objects.results });
