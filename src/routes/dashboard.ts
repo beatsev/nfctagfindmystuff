@@ -16,8 +16,9 @@ app.use('*', authMiddleware());
 app.get('/dashboard', async (c) => {
   const user = c.get('user') as SessionPayload;
 
-  // Get status filter from query parameter
+  // Get status filter and sort from query parameters
   const statusFilter = c.req.query('status');
+  const sortBy = c.req.query('sort') || 'recent_scan'; // Default to most recent scan
 
   // Fetch user details
   const userData = await c.env.DB.prepare(
@@ -33,7 +34,31 @@ app.get('/dashboard', async (c) => {
     bindings.push(statusFilter);
   }
 
-  // Fetch user's objects with stats, sorted by status priority (lost > recovered > active)
+  // Build ORDER BY clause based on sort parameter
+  let orderByClause: string;
+  switch (sortBy) {
+    case 'status':
+      // Sort by status priority (lost > recovered > active), then by created_at
+      orderByClause = `
+        CASE o.status
+          WHEN 'lost' THEN 1
+          WHEN 'recovered' THEN 2
+          ELSE 3
+        END,
+        o.created_at DESC`;
+      break;
+    case 'created':
+      // Sort by creation date (newest first)
+      orderByClause = 'o.created_at DESC';
+      break;
+    case 'recent_scan':
+    default:
+      // Sort by most recent scan (objects with recent scans first, then by created_at for objects without scans)
+      orderByClause = 'COALESCE(MAX(se.ts), o.created_at) DESC';
+      break;
+  }
+
+  // Fetch user's objects with stats
   const objects = await c.env.DB.prepare(`
     SELECT
       o.id,
@@ -50,13 +75,7 @@ app.get('/dashboard', async (c) => {
     LEFT JOIN scan_events se ON se.object_id = o.id
     WHERE ${whereClause}
     GROUP BY o.id
-    ORDER BY
-      CASE o.status
-        WHEN 'lost' THEN 1
-        WHEN 'recovered' THEN 2
-        ELSE 3
-      END,
-      o.created_at DESC
+    ORDER BY ${orderByClause}
   `).bind(...bindings).all();
 
   // Count unread messages (placeholder - all messages for now)
@@ -73,6 +92,7 @@ app.get('/dashboard', async (c) => {
     objects: objects.results,
     unreadMessages: (messageCount?.count as number) || 0,
     currentFilter: statusFilter || 'all',
+    currentSort: sortBy,
   }));
 });
 

@@ -4,6 +4,7 @@ export interface DashboardPageProps {
   objects: any[];
   unreadMessages: number;
   currentFilter?: string;
+  currentSort?: string;
 }
 
 export function renderDashboardPage(props: DashboardPageProps): string {
@@ -159,14 +160,14 @@ export function renderDashboardPage(props: DashboardPageProps): string {
       </button>
     </div>
 
-    <!-- Status Filter Dropdown -->
+    <!-- Filter and Sort Controls -->
     <div style="margin-bottom: 24px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
       <label for="status-filter" style="font-weight: 500; color: #666;">
         Filter:
       </label>
       <select
         id="status-filter"
-        onchange="window.location.href = '/dashboard' + (this.value !== 'all' ? '?status=' + this.value : '')"
+        onchange="updateDashboardUrl()"
         style="padding: 10px 16px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; background: white; cursor: pointer; min-width: 150px; font-family: inherit;"
       >
         <option value="all" ${(!props.currentFilter || props.currentFilter === 'all') ? 'selected' : ''}>
@@ -183,14 +184,33 @@ export function renderDashboardPage(props: DashboardPageProps): string {
         </option>
       </select>
 
-      ${props.currentFilter && props.currentFilter !== 'all' ? `
+      <label for="sort-by" style="font-weight: 500; color: #666; margin-left: 12px;">
+        Sort:
+      </label>
+      <select
+        id="sort-by"
+        onchange="updateDashboardUrl()"
+        style="padding: 10px 16px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; background: white; cursor: pointer; min-width: 170px; font-family: inherit;"
+      >
+        <option value="recent_scan" ${(!props.currentSort || props.currentSort === 'recent_scan') ? 'selected' : ''}>
+          Recent Scan
+        </option>
+        <option value="status" ${props.currentSort === 'status' ? 'selected' : ''}>
+          Status (Lost First)
+        </option>
+        <option value="created" ${props.currentSort === 'created' ? 'selected' : ''}>
+          Date Created
+        </option>
+      </select>
+
+      ${(props.currentFilter && props.currentFilter !== 'all') || (props.currentSort && props.currentSort !== 'recent_scan') ? `
         <a
           href="/dashboard"
           style="color: #667eea; text-decoration: none; font-size: 13px; padding: 8px 12px; background: #f5f5f5; border-radius: 6px; transition: background 0.2s;"
           onmouseover="this.style.background='#eeeeee'"
           onmouseout="this.style.background='#f5f5f5'"
         >
-          Clear filter
+          Reset
         </a>
       ` : ''}
     </div>
@@ -261,6 +281,22 @@ export function renderDashboardPage(props: DashboardPageProps): string {
       if (hours < 24) return hours + 'h ago';
       if (days < 7) return days + 'd ago';
       return date.toLocaleDateString();
+    }
+
+    function updateDashboardUrl() {
+      const filter = document.getElementById('status-filter').value;
+      const sort = document.getElementById('sort-by').value;
+      const params = new URLSearchParams();
+
+      if (filter && filter !== 'all') {
+        params.set('status', filter);
+      }
+      if (sort && sort !== 'recent_scan') {
+        params.set('sort', sort);
+      }
+
+      const queryString = params.toString();
+      window.location.href = '/dashboard' + (queryString ? '?' + queryString : '');
     }
   </script>
 </body>
