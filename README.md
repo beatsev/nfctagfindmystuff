@@ -106,7 +106,7 @@ A serverless web application for tracking lost items via NFC tags. When someone 
 
 New users can create accounts without manual setup:
 
-1. **Message the bot** on Telegram: [@your_nfc_bot_bot](https://t.me/Nfcstufffinderbottagger_bot)
+1. **Message the bot** on Telegram: [@your_nfc_bot_bot](https://t.me/your_nfc_bot_bot)
 2. **Send `/start` command**
 3. **Click the signup link** you receive (valid for 1 hour)
 4. **Fill in your email and name**
@@ -138,7 +138,7 @@ VALUES ('DEMO123', 'obj_test456', 1);
 
 ### For Owners
 
-1. **Sign Up** - Message [@your_nfc_bot_bot](https://t.me/Nfcstufffinderbottagger_bot) and send `/start`
+1. **Sign Up** - Message [@your_nfc_bot_bot](https://t.me/your_nfc_bot_bot) and send `/start`
 2. **Complete Signup** - Click the link and fill in your email and name
 3. **Add Objects** - Create objects you want to track in the dashboard
 4. **Create Tags** - Generate tag IDs and link them to objects
