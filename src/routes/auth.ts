@@ -7,6 +7,7 @@ import { renderLoginPage } from '../views/login-page';
 import { renderSignupPage, renderSignupErrorPage } from '../views/signup-page';
 import { createMagicLinkToken, verifyMagicLinkToken, createSessionToken } from '../lib/jwt';
 import { rateLimitMiddleware } from '../middleware/rate-limit';
+import { sendMagicLinkEmail } from '../services/email';
 
 /**
  * Sleep for a specified number of milliseconds
@@ -69,6 +70,7 @@ const app = new Hono<{ Bindings: Env }>();
 // Validation schemas with email normalization
 const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
+  use_telegram: z.string().optional(), // checkbox: '1' if checked, absent if unchecked
 });
 
 const signupSchema = z.object({
@@ -88,24 +90,19 @@ app.post(
   rateLimitMiddleware(10, 300), // 10 login attempts per 5 minutes (more lenient for testing)
   zValidator('form', loginSchema),
   async (c) => {
-    const { email } = c.req.valid('form');
+    const { email, use_telegram } = c.req.valid('form');
+    const viaEmail = use_telegram !== '1';
 
     try {
       // Look up user by email (case-insensitive)
       const user = await c.env.DB.prepare(
-        'SELECT id, email, telegram_chat_id, name FROM users WHERE LOWER(email) = ?'
-      ).bind(email).first();
+        'SELECT id, email, telegram_chat_id, notification_channel, name FROM users WHERE LOWER(email) = ?'
+      ).bind(email).first<{ id: string; email: string; telegram_chat_id: string | null; notification_channel: string; name: string }>();
 
       if (!user) {
         // Don't reveal if user exists or not (security)
         return c.html(renderLoginPage({
-          success: 'If this email is registered, you will receive a login link on Telegram.',
-        }));
-      }
-
-      if (!user.telegram_chat_id) {
-        return c.html(renderLoginPage({
-          error: 'Your account is not linked to Telegram. Please contact support.',
+          success: 'If this email is registered, you will receive a login link.',
         }));
       }
 
@@ -117,34 +114,39 @@ app.post(
       );
 
       const magicLink = `${c.env.DOMAIN}/api/auth/verify?token=${token}`;
+      // Login page checkbox overrides: unchecked = email, checked = Telegram
+      if (viaEmail) {
+        const ok = await sendMagicLinkEmail(user.email, magicLink, c.env);
+        if (!ok) {
+          return c.html(renderLoginPage({ error: 'Failed to send login link. Please try again.' }));
+        }
+        return c.html(renderLoginPage({ success: 'Magic link sent! Check your email inbox.' }));
+      }
 
-      // Send magic link via Telegram (using HTML for better URL compatibility)
+      // Telegram path
+      if (!user.telegram_chat_id) {
+        return c.html(renderLoginPage({
+          error: 'No Telegram linked. Uncheck "Send via Telegram" to receive the link by email instead.',
+        }));
+      }
+
       const message = `🔐 <b>Dashboard Login</b>\n\nClick the link below to access your dashboard:\n\n${magicLink}\n\n⏰ This link expires in 15 minutes.\n\n<i>If you didn't request this, please ignore this message.</i>`;
-
       const response = await fetchWithRetry(
         `https://api.telegram.org/bot${c.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: user.telegram_chat_id,
-            text: message,
-            parse_mode: 'HTML',
-          }),
+          body: JSON.stringify({ chat_id: user.telegram_chat_id, text: message, parse_mode: 'HTML' }),
         },
-        3 // 3 retry attempts
+        3
       );
 
       if (!response.ok) {
         console.error('Failed to send Telegram message:', await response.text());
-        return c.html(renderLoginPage({
-          error: 'Failed to send login link. Please try again.',
-        }));
+        return c.html(renderLoginPage({ error: 'Failed to send login link. Please try again.' }));
       }
 
-      return c.html(renderLoginPage({
-        success: 'Magic link sent! Check your Telegram messages.',
-      }));
+      return c.html(renderLoginPage({ success: 'Magic link sent! Check your Telegram.' }));
     } catch (error) {
       console.error('Login error:', error);
       return c.html(renderLoginPage({

@@ -454,4 +454,66 @@ app.patch(
   }
 );
 
+// GET /api/settings - Get current user settings
+app.get('/api/settings', async (c) => {
+  const user = c.get('user') as SessionPayload;
+
+  const row = await c.env.DB.prepare(
+    'SELECT email, name, notification_channel, default_filter, default_sort FROM users WHERE id = ?'
+  ).bind(user.userId).first<{ email: string; name: string; notification_channel: string; default_filter: string; default_sort: string }>();
+
+  if (!row) {
+    return c.json({ error: 'User not found' }, 404);
+  }
+
+  return c.json({
+    email: row.email,
+    name: row.name,
+    notification_channel: row.notification_channel ?? 'telegram',
+    default_filter: row.default_filter ?? 'all',
+    default_sort: row.default_sort ?? 'recent_scan',
+  });
+});
+
+// PATCH /api/settings - Update user preferences
+app.patch(
+  '/api/settings',
+  zValidator('json', z.object({
+    notification_channel: z.enum(['telegram', 'email', 'both']).optional(),
+    default_filter: z.enum(['all', 'active', 'lost', 'recovered']).optional(),
+    default_sort: z.enum(['recent_scan', 'status', 'created']).optional(),
+  })),
+  async (c) => {
+    const user = c.get('user') as SessionPayload;
+    const data = c.req.valid('json');
+
+    const updates: string[] = [];
+    const values: any[] = [];
+
+    if (data.notification_channel !== undefined) {
+      updates.push('notification_channel = ?');
+      values.push(data.notification_channel);
+    }
+    if (data.default_filter !== undefined) {
+      updates.push('default_filter = ?');
+      values.push(data.default_filter);
+    }
+    if (data.default_sort !== undefined) {
+      updates.push('default_sort = ?');
+      values.push(data.default_sort);
+    }
+
+    if (updates.length === 0) {
+      return c.json({ error: 'No fields to update' }, 400);
+    }
+
+    values.push(user.userId);
+    await c.env.DB.prepare(
+      `UPDATE users SET ${updates.join(', ')} WHERE id = ?`
+    ).bind(...values).run();
+
+    return c.json(data);
+  }
+);
+
 export default app;

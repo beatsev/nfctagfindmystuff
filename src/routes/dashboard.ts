@@ -16,14 +16,14 @@ app.use('*', authMiddleware());
 app.get('/dashboard', async (c) => {
   const user = c.get('user') as SessionPayload;
 
-  // Get status filter and sort from query parameters
-  const statusFilter = c.req.query('status');
-  const sortBy = c.req.query('sort') || 'recent_scan'; // Default to most recent scan
-
-  // Fetch user details
+  // Fetch user details including saved preferences
   const userData = await c.env.DB.prepare(
-    'SELECT name FROM users WHERE id = ?'
-  ).bind(user.userId).first();
+    'SELECT name, default_filter, default_sort FROM users WHERE id = ?'
+  ).bind(user.userId).first<{ name: string; default_filter: string; default_sort: string }>();
+
+  // Use query params if provided, otherwise fall back to saved defaults
+  const statusFilter = c.req.query('status') ?? (userData?.default_filter !== 'all' ? userData?.default_filter : undefined);
+  const sortBy = c.req.query('sort') ?? userData?.default_sort ?? 'recent_scan';
 
   // Build dynamic WHERE clause for status filtering
   let whereClause = 'o.user_id = ?';
@@ -851,6 +851,186 @@ function getCommonStyles(): string {
   `;
 }
 
+// GET /dashboard/settings - Notification settings page
+app.get('/dashboard/settings', async (c) => {
+  const user = c.get('user') as SessionPayload;
+
+  const userData = await c.env.DB.prepare(
+    'SELECT name, email, notification_channel, default_filter, default_sort FROM users WHERE id = ?'
+  ).bind(user.userId).first<{ name: string; email: string; notification_channel: string; default_filter: string; default_sort: string }>();
+
+  const channel = userData?.notification_channel ?? 'telegram';
+  const defaultFilter = userData?.default_filter ?? 'all';
+  const defaultSort = userData?.default_sort ?? 'recent_scan';
+
+  return c.html(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings - Dashboard</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <style>
+    ${getCommonStyles()}
+    .settings-card {
+      background: white;
+      border-radius: 12px;
+      padding: 32px;
+      margin-bottom: 24px;
+      max-width: 600px;
+    }
+    .channel-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .channel-option:has(input:checked) {
+      border-color: #667eea;
+      background: #f5f4ff;
+    }
+    .channel-option input[type="radio"] {
+      margin-top: 2px;
+      accent-color: #667eea;
+    }
+    .channel-label { font-weight: 500; color: #333; }
+    .channel-desc { font-size: 13px; color: #888; margin-top: 2px; }
+  </style>
+</head>
+<body style="margin: 0; background: #f5f5f5;">
+  <div class="nav-bar">
+    <h1>🏷️ NFC Tag Tracker</h1>
+    <div class="nav-links">
+      <a href="/dashboard" class="nav-link">Objects</a>
+      <a href="/dashboard/messages" class="nav-link">Messages</a>
+      <a href="/dashboard/settings" class="nav-link active">Settings</a>
+      <form method="POST" action="/api/auth/logout" style="margin: 0;">
+        <button type="submit" class="nav-link" style="background: none; border: none; cursor: pointer; font-family: inherit; font-size: 14px;">
+          Logout
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <h2 style="margin: 0 0 24px 0; color: #333;">Settings</h2>
+
+    <div class="settings-card">
+      <h3 style="margin: 0 0 8px 0; color: #333;">Account</h3>
+      <p style="margin: 0 0 4px 0; color: #666; font-size: 14px;"><strong>Name:</strong> ${escapeHtml(userData?.name ?? '')}</p>
+      <p style="margin: 0; color: #666; font-size: 14px;"><strong>Email:</strong> ${escapeHtml(userData?.email ?? '')}</p>
+    </div>
+
+    <div class="settings-card">
+      <h3 style="margin: 0 0 4px 0; color: #333;">Notification Channel</h3>
+      <p style="margin: 0 0 20px 0; color: #888; font-size: 14px;">How you receive alerts when your tags are scanned</p>
+
+      <div id="settings-result" style="margin-bottom: 12px;"></div>
+
+      <form
+        hx-patch="/api/settings"
+        hx-ext="json-enc"
+        hx-target="#settings-result"
+        hx-swap="innerHTML"
+      >
+        <label class="channel-option">
+          <input type="radio" name="notification_channel" value="telegram" ${channel === 'telegram' ? 'checked' : ''}>
+          <div>
+            <div class="channel-label">Telegram only</div>
+            <div class="channel-desc">Receive alerts via Telegram bot</div>
+          </div>
+        </label>
+
+        <label class="channel-option">
+          <input type="radio" name="notification_channel" value="email" ${channel === 'email' ? 'checked' : ''}>
+          <div>
+            <div class="channel-label">Email only</div>
+            <div class="channel-desc">Receive alerts and login links via email</div>
+          </div>
+        </label>
+
+        <label class="channel-option">
+          <input type="radio" name="notification_channel" value="both" ${channel === 'both' ? 'checked' : ''}>
+          <div>
+            <div class="channel-label">Telegram + Email</div>
+            <div class="channel-desc">Receive alerts on both channels</div>
+          </div>
+        </label>
+
+        <button
+          type="submit"
+          class="cta-button"
+          style="margin-top: 20px; width: auto; padding: 12px 32px;"
+        >
+          Save
+        </button>
+      </form>
+    </div>
+
+    <div class="settings-card">
+      <h3 style="margin: 0 0 4px 0; color: #333;">Dashboard Defaults</h3>
+      <p style="margin: 0 0 20px 0; color: #888; font-size: 14px;">Default view when opening the dashboard</p>
+
+      <div id="dashboard-settings-result" style="margin-bottom: 12px;"></div>
+
+      <form
+        hx-patch="/api/settings"
+        hx-ext="json-enc"
+        hx-target="#dashboard-settings-result"
+        hx-swap="innerHTML"
+      >
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333; font-size: 14px;">Default Filter</label>
+          <select name="default_filter" style="width: 100%; padding: 10px 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; background: white; cursor: pointer;">
+            <option value="all" ${defaultFilter === 'all' ? 'selected' : ''}>All items</option>
+            <option value="active" ${defaultFilter === 'active' ? 'selected' : ''}>Active only</option>
+            <option value="lost" ${defaultFilter === 'lost' ? 'selected' : ''}>Lost only</option>
+            <option value="recovered" ${defaultFilter === 'recovered' ? 'selected' : ''}>Recovered only</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 4px;">
+          <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333; font-size: 14px;">Default Sort</label>
+          <select name="default_sort" style="width: 100%; padding: 10px 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; background: white; cursor: pointer;">
+            <option value="recent_scan" ${defaultSort === 'recent_scan' ? 'selected' : ''}>Most recently scanned</option>
+            <option value="status" ${defaultSort === 'status' ? 'selected' : ''}>Status (lost first)</option>
+            <option value="created" ${defaultSort === 'created' ? 'selected' : ''}>Date created</option>
+          </select>
+        </div>
+
+        <button
+          type="submit"
+          class="cta-button"
+          style="margin-top: 20px; width: auto; padding: 12px 32px;"
+        >
+          Save
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/htmx.org@2.0.4/dist/ext/json-enc.js"></script>
+  <script>
+    document.body.addEventListener('htmx:afterRequest', function(e) {
+      if (e.detail.xhr.status === 200) {
+        const target = e.detail.target;
+        if (target) {
+          target.innerHTML = '<p style="color: #2e7d32; background: #e8f5e9; padding: 10px 16px; border-radius: 6px; margin: 0;">Saved!</p>';
+          setTimeout(() => { target.innerHTML = ''; }, 3000);
+        }
+      }
+    });
+  </script>
+</body>
+</html>`);
+});
+
 // GET /dashboard/messages - Messages inbox page
 app.get('/dashboard/messages', async (c) => {
   const user = c.get('user') as SessionPayload;
@@ -926,6 +1106,7 @@ app.get('/dashboard/messages', async (c) => {
     <div class="nav-links">
       <a href="/dashboard" class="nav-link">Objects</a>
       <a href="/dashboard/messages" class="nav-link active">Messages</a>
+      <a href="/dashboard/settings" class="nav-link">Settings</a>
       <form method="POST" action="/api/auth/logout" style="margin: 0;">
         <button type="submit" class="nav-link" style="background: none; border: none; cursor: pointer; font-family: inherit; font-size: 14px;">
           Logout

@@ -135,6 +135,7 @@ export function renderDashboardPage(props: DashboardPageProps): string {
       <a href="/dashboard/messages" class="nav-link">
         Messages ${props.unreadMessages > 0 ? `<span style="background: #ff5252; color: white; padding: 2px 6px; border-radius: 10px; font-size: 11px; margin-left: 4px;">${props.unreadMessages}</span>` : ''}
       </a>
+      <a href="/dashboard/settings" class="nav-link">Settings</a>
       <form method="POST" action="/api/auth/logout" style="margin: 0;">
         <button type="submit" class="nav-link" style="background: none; border: none; cursor: pointer; font-family: inherit; font-size: 14px;">
           Logout

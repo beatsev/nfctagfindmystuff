@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import type { Env } from '../types/env';
 import { updateScanEventLocation } from '../services/scan-event';
-import { sendTelegramNotification } from '../services/telegram';
+import { sendNotification } from '../services/notify';
 import { rateLimitMiddleware } from '../middleware/rate-limit';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -80,7 +80,7 @@ app.post(
 
       // Send Telegram notification with message preview (async, non-blocking)
       c.executionCtx.waitUntil(
-        sendTelegramNotification({
+        sendNotification({
           userId: objectData.user_id as string,
           objectName: objectData.name as string,
           tagId,

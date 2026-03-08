@@ -9,9 +9,11 @@ export interface Env {
   TELEGRAM_BOT_TOKEN: string;
   JWT_SECRET: string;
   MAGIC_LINK_SECRET: string;
+  AGENTMAIL_API_KEY: string;
 
   // Environment Variables
   DOMAIN: string;
+  AGENTMAIL_INBOX_ID: string;
   SESSION_DURATION_HOURS?: string;
   MAGIC_LINK_EXPIRY_MINUTES?: string;
 }

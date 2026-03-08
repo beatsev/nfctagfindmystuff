@@ -8,6 +8,7 @@ A serverless web application for tracking lost items via NFC tags. When someone 
 ✅ **QR Code Generation** - Download and print QR codes for each tag
 ✅ **NFC Tag Scanning** - Instant landing pages when tags are scanned
 ✅ **Telegram Notifications** - Real-time alerts when your items are found
+✅ **Email Notifications** - Optional email alerts via AgentMail (alternative or in addition to Telegram)
 ✅ **Finder Messages** - Anonymous communication between finders and owners
 ✅ **Location Sharing** - GPS coordinates with finder consent
 ✅ **Dashboard** - Manage objects, tags, and view scan history
@@ -27,6 +28,7 @@ A serverless web application for tracking lost items via NFC tags. When someone 
 - **HTMX** - Progressive enhancement
 - **Leaflet.js** - Interactive maps
 - **Telegram Bot API** - Free notifications
+- **AgentMail** - Email delivery for notifications and magic links
 - **TypeScript** - Type safety
 
 ## Quick Start
@@ -36,6 +38,7 @@ A serverless web application for tracking lost items via NFC tags. When someone 
 - Node.js 18+ and npm
 - Cloudflare account
 - Telegram bot token ([create one](https://t.me/BotFather))
+- AgentMail account and inbox ([agentmail.to](https://agentmail.to)) — required for email notifications and email-based magic link login
 
 ### Installation
 
@@ -86,6 +89,12 @@ A serverless web application for tracking lost items via NFC tags. When someone 
    TELEGRAM_BOT_TOKEN=your_bot_token_here
    JWT_SECRET=your_jwt_secret
    MAGIC_LINK_SECRET=your_magic_link_secret
+   AGENTMAIL_API_KEY=your_agentmail_api_key
+   ```
+
+   Also set `AGENTMAIL_INBOX_ID` in `wrangler.toml` under `[vars]`:
+   ```toml
+   AGENTMAIL_INBOX_ID = "your-inbox-name"   # the local part of your inbox address, e.g. "hello" for hello@agentmail.to
    ```
 
 6. **Run migrations**
@@ -290,6 +299,7 @@ nfctagfindmystuff/
    npx wrangler secret put TELEGRAM_BOT_TOKEN
    npx wrangler secret put JWT_SECRET
    npx wrangler secret put MAGIC_LINK_SECRET
+   npx wrangler secret put AGENTMAIL_API_KEY
    ```
 
 3. **Deploy to Cloudflare**

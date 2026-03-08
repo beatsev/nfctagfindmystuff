@@ -49,22 +49,32 @@ export function renderLoginPage(props: LoginPageProps = {}): string {
           >
         </div>
 
+        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 20px; user-select: none;">
+          <input
+            type="checkbox"
+            id="use_telegram"
+            name="use_telegram"
+            value="1"
+            checked
+            onchange="document.getElementById('login-hint').textContent = this.checked ? 'Check your Telegram for the link.' : 'Check your email inbox for the link.'"
+            style="width: 18px; height: 18px; accent-color: #667eea; cursor: pointer; flex-shrink: 0;"
+          >
+          <span style="font-size: 14px; color: #555;">Send via Telegram</span>
+        </label>
+
         <button
           type="submit"
           class="cta-button"
-          style="width: 100%; padding: 14px; font-size: 16px; margin-top: 8px;"
-          aria-label="Send magic link to email"
+          style="width: 100%; padding: 14px; font-size: 16px;"
+          aria-label="Send magic link"
         >
           Send Magic Link
         </button>
       </form>
 
       <div class="privacy" style="margin-top: 24px;">
-        <p style="font-size: 14px; color: #666; line-height: 1.6;">
-          <strong>How it works:</strong><br>
-          1️⃣ Enter your registered email<br>
-          2️⃣ Check your Telegram for a login link<br>
-          3️⃣ Click the link to access your dashboard<br>
+        <p id="login-hint" style="font-size: 14px; color: #666; text-align: center;">
+          Check your Telegram for the link.
         </p>
       </div>
 

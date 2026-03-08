@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../types/env';
 import { lookupTag } from '../services/tag-lookup';
 import { logScanEvent } from '../services/scan-event';
-import { sendTelegramNotification } from '../services/telegram';
+import { sendNotification } from '../services/notify';
 import { renderLandingPage } from '../views/landing-page';
 import { landingPageStyles } from '../views/landing-styles';
 import { rateLimitMiddleware } from '../middleware/rate-limit';
@@ -65,7 +65,7 @@ app.get('/t/:tagId', rateLimitMiddleware(10, 60), async (c) => {
       region: cf?.region || null,
       country: cf?.country || null,
     }, c.env).then((scanEventId) =>
-      sendTelegramNotification({
+      sendNotification({
         userId: tagData.userId,
         objectName: tagData.objectName,
         tagId: tagData.tagId,
