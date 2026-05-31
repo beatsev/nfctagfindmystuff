@@ -86,23 +86,25 @@ function escapeMarkdown(text: string): string {
  * Send a Telegram notification to the owner
  * @param payload - Notification data
  * @param env - Cloudflare environment bindings
+ * @param chatId - Pre-fetched Telegram chat ID (avoids extra DB query)
  */
 export async function sendTelegramNotification(
   payload: NotificationPayload,
-  env: Env
+  env: Env,
+  chatId?: string
 ): Promise<void> {
-  // Fetch user's Telegram chat ID from DB
-  const user = await env.DB.prepare(
-    'SELECT telegram_chat_id FROM users WHERE id = ?'
-  ).bind(payload.userId).first();
-
-  if (!user || !user.telegram_chat_id) {
-    console.warn(`No Telegram chat ID for user ${payload.userId}`);
-    // Don't throw error - just log and continue
-    return;
+  // Use provided chatId or fetch from DB as fallback
+  if (!chatId) {
+    const user = await env.DB.prepare(
+      'SELECT telegram_chat_id FROM users WHERE id = ?'
+    ).bind(payload.userId).first();
+    chatId = user?.telegram_chat_id as string | undefined;
   }
 
-  const chatId = user.telegram_chat_id as string;
+  if (!chatId) {
+    console.warn(`No Telegram chat ID for user ${payload.userId}`);
+    return;
+  }
 
   // Format message
   const emoji = payload.hasMessage ? '💬' : '🔍';
