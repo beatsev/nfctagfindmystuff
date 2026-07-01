@@ -14,6 +14,7 @@ export interface Env {
   // Environment Variables
   DOMAIN: string;
   AGENTMAIL_INBOX_ID: string;
+  TELEGRAM_BOT_USERNAME: string;
   SESSION_DURATION_HOURS?: string;
   MAGIC_LINK_EXPIRY_MINUTES?: string;
 }

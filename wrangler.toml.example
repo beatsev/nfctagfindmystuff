@@ -28,6 +28,7 @@ DOMAIN = "https://your-worker-name.your-account.workers.dev"
 SESSION_DURATION_HOURS = "720"
 MAGIC_LINK_EXPIRY_MINUTES = "15"
 AGENTMAIL_INBOX_ID = "yourname@agentmail.to"
+TELEGRAM_BOT_USERNAME = "your_bot_username"
 
 # Secrets (set via: wrangler secret put <NAME>)
 # TELEGRAM_BOT_TOKEN

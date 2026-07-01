@@ -1,9 +1,11 @@
 export interface LoginPageProps {
   error?: string;
   success?: string;
+  botUsername: string;
 }
 
-export function renderLoginPage(props: LoginPageProps = {}): string {
+export function renderLoginPage(props: LoginPageProps): string {
+  const telegramUrl = `https://t.me/${props.botUsername}`;
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -18,7 +20,7 @@ export function renderLoginPage(props: LoginPageProps = {}): string {
       <div class="icon">🔐</div>
       <h1>Owner Dashboard Login</h1>
       <p class="description">
-        Enter your email to receive a magic link via Telegram
+        Enter your email to receive a magic link
       </p>
 
       ${props.error ? `
@@ -81,21 +83,42 @@ export function renderLoginPage(props: LoginPageProps = {}): string {
       <div style="margin-top: 32px; padding-top: 24px; border-top: 2px solid #e0e0e0;">
         <h3 style="text-align: center; margin-bottom: 16px; color: #333;">New User?</h3>
         <p style="text-align: center; margin-bottom: 16px; color: #666; font-size: 14px;">
-          Get started by messaging our Telegram bot to receive a signup link
+          Choose how you'd like to sign up — Telegram is recommended.
         </p>
-        <div style="text-align: center;">
+
+        <!-- Primary: Telegram signup (recommended) -->
+        <div style="background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); border-radius: 12px; padding: 16px; margin-bottom: 12px;">
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+            <span style="background: #22c55e; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Recommended</span>
+          </div>
           <a
-            href="https://t.me/Nfcstufffinderbottagger_bot"
+            href="${telegramUrl}"
             target="_blank"
             class="cta-button"
-            style="display: inline-block; text-decoration: none; padding: 12px 24px; font-size: 15px;"
+            style="display: block; text-align: center; text-decoration: none; padding: 12px 24px; font-size: 15px;"
+            aria-label="Start signup via Telegram"
           >
-            📱 Start Signup on Telegram
+            📱 Sign up via Telegram
           </a>
+          <p style="margin: 8px 0 0 0; font-size: 12px; color: #6b7280; text-align: center;">
+            Send <code>/start</code> to @${props.botUsername}
+          </p>
         </div>
-        <p style="text-align: center; margin-top: 12px; color: #999; font-size: 12px;">
-          Send <code>/start</code> to get your personal signup link
-        </p>
+
+        <!-- Alternative: Email signup -->
+        <div style="text-align: center;">
+          <a
+            href="/signup"
+            class="cta-button"
+            style="display: inline-block; text-decoration: none; padding: 12px 24px; font-size: 14px; background: #6b7280;"
+            aria-label="Sign up with email instead"
+          >
+            ✉️ Or sign up with email
+          </a>
+          <p style="margin: 8px 0 0 0; font-size: 12px; color: #999;">
+            No Telegram needed
+          </p>
+        </div>
       </div>
     </div>
   </div>

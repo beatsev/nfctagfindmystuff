@@ -9,3 +9,6 @@ JWT_SECRET=your-random-jwt-secret-change-in-production
 
 # Magic link secret for email verification (use a different strong random string)
 MAGIC_LINK_SECRET=your-random-magic-link-secret-change-in-production
+
+# Note: TELEGRAM_BOT_USERNAME is a non-secret public value
+# (configured in wrangler.toml [vars] — e.g. "your_bot_username")

@@ -4,10 +4,10 @@ import { z } from 'zod';
 import { setCookie, deleteCookie } from 'hono/cookie';
 import type { Env } from '../types/env';
 import { renderLoginPage } from '../views/login-page';
-import { renderSignupPage, renderSignupErrorPage } from '../views/signup-page';
+import { renderSignupPage, renderSignupErrorPage, renderSignupPendingPage } from '../views/signup-page';
 import { createMagicLinkToken, verifyMagicLinkToken, createSessionToken } from '../lib/jwt';
 import { rateLimitMiddleware } from '../middleware/rate-limit';
-import { sendMagicLinkEmail } from '../services/email';
+import { sendMagicLinkEmail, sendConfirmationEmail } from '../services/email';
 
 /**
  * Sleep for a specified number of milliseconds
@@ -79,9 +79,15 @@ const signupSchema = z.object({
   token: z.string().uuid(),
 });
 
+const emailSignupSchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+  name: z.string().min(1).max(100).trim(),
+});
+
 // GET /login - Show login page
 app.get('/login', (c) => {
-  return c.html(renderLoginPage());
+  return c.html(renderLoginPage({
+          botUsername: c.env.TELEGRAM_BOT_USERNAME }));
 });
 
 // POST /api/auth/login - Send magic link via Telegram
@@ -102,6 +108,7 @@ app.post(
       if (!user) {
         // Don't reveal if user exists or not (security)
         return c.html(renderLoginPage({
+          botUsername: c.env.TELEGRAM_BOT_USERNAME,
           success: 'If this email is registered, you will receive a login link.',
         }));
       }
@@ -118,14 +125,17 @@ app.post(
       if (viaEmail) {
         const ok = await sendMagicLinkEmail(user.email, magicLink, c.env);
         if (!ok) {
-          return c.html(renderLoginPage({ error: 'Failed to send login link. Please try again.' }));
+          return c.html(renderLoginPage({
+          botUsername: c.env.TELEGRAM_BOT_USERNAME, error: 'Failed to send login link. Please try again.' }));
         }
-        return c.html(renderLoginPage({ success: 'Magic link sent! Check your email inbox.' }));
+        return c.html(renderLoginPage({
+          botUsername: c.env.TELEGRAM_BOT_USERNAME, success: 'Magic link sent! Check your email inbox.' }));
       }
 
       // Telegram path
       if (!user.telegram_chat_id) {
         return c.html(renderLoginPage({
+          botUsername: c.env.TELEGRAM_BOT_USERNAME,
           error: 'No Telegram linked. Uncheck "Send via Telegram" to receive the link by email instead.',
         }));
       }
@@ -143,13 +153,16 @@ app.post(
 
       if (!response.ok) {
         console.error('Failed to send Telegram message:', await response.text());
-        return c.html(renderLoginPage({ error: 'Failed to send login link. Please try again.' }));
+        return c.html(renderLoginPage({
+          botUsername: c.env.TELEGRAM_BOT_USERNAME, error: 'Failed to send login link. Please try again.' }));
       }
 
-      return c.html(renderLoginPage({ success: 'Magic link sent! Check your Telegram.' }));
+      return c.html(renderLoginPage({
+          botUsername: c.env.TELEGRAM_BOT_USERNAME, success: 'Magic link sent! Check your Telegram.' }));
     } catch (error) {
       console.error('Login error:', error);
       return c.html(renderLoginPage({
+          botUsername: c.env.TELEGRAM_BOT_USERNAME,
         error: 'An error occurred. Please try again.',
       }));
     }
@@ -162,6 +175,7 @@ app.get('/api/auth/verify', async (c) => {
 
   if (!token) {
     return c.html(renderLoginPage({
+          botUsername: c.env.TELEGRAM_BOT_USERNAME,
       error: 'Invalid login link.',
     }));
   }
@@ -172,6 +186,7 @@ app.get('/api/auth/verify', async (c) => {
 
     if (!payload) {
       return c.html(renderLoginPage({
+          botUsername: c.env.TELEGRAM_BOT_USERNAME,
         error: 'Login link expired or invalid. Please request a new one.',
       }));
     }
@@ -183,6 +198,7 @@ app.get('/api/auth/verify', async (c) => {
 
     if (!user) {
       return c.html(renderLoginPage({
+          botUsername: c.env.TELEGRAM_BOT_USERNAME,
         error: 'User not found.',
       }));
     }
@@ -211,31 +227,33 @@ app.get('/api/auth/verify', async (c) => {
   } catch (error) {
     console.error('Verification error:', error);
     return c.html(renderLoginPage({
+          botUsername: c.env.TELEGRAM_BOT_USERNAME,
       error: 'An error occurred. Please try again.',
     }));
   }
 });
 
-// GET /signup - Show signup page
+// GET /signup - Show signup page (email-first if no token, Telegram if token present)
 app.get('/signup', async (c) => {
   const token = c.req.query('token');
+  const botUsername = c.env.TELEGRAM_BOT_USERNAME;
 
   if (!token) {
-    return c.html(renderSignupErrorPage(
-      'No signup token provided. Please message the bot to get a signup link.'
-    ));
+    // No token = email-first signup flow (alternative onboarding)
+    return c.html(renderSignupPage({ botUsername }));
   }
 
   // Verify token exists in KV
   const chatId = await c.env.TAGS_KV.get(`signup:${token}`);
 
   if (!chatId) {
-    return c.html(renderSignupErrorPage(
-      'This signup link has expired or is invalid. Signup links are valid for 1 hour.'
-    ));
+    return c.html(renderSignupErrorPage({
+      message: 'This signup link has expired or is invalid. Signup links are valid for 1 hour.',
+      botUsername,
+    }));
   }
 
-  return c.html(renderSignupPage({ token }));
+  return c.html(renderSignupPage({ token, botUsername }));
 });
 
 // POST /api/auth/signup - Create new user account
@@ -321,6 +339,139 @@ app.post(
     }
   }
 );
+
+// POST /api/auth/signup-email - Email-first signup: store pending, send confirmation email
+app.post(
+  '/api/auth/signup-email',
+  rateLimitMiddleware(5, 300), // 5 email signups per 5 minutes
+  zValidator('form', emailSignupSchema),
+  async (c) => {
+    const { email, name } = c.req.valid('form');
+
+    try {
+      // Check if email already exists (case-insensitive)
+      const existingUser = await c.env.DB.prepare(
+        'SELECT id FROM users WHERE LOWER(email) = ?'
+      ).bind(email).first();
+
+      if (existingUser) {
+        return c.html(renderSignupPendingPage({
+          email,
+          error: 'An account with this email already exists. Try logging in instead.',
+        }));
+      }
+
+      // Generate confirmation token
+      const token = crypto.randomUUID();
+
+      // Store pending signup in KV (1 hour TTL, matches Telegram signup expiry)
+      await c.env.TAGS_KV.put(
+        `pending-signup:${token}`,
+        JSON.stringify({ email, name }),
+        { expirationTtl: 3600 }
+      );
+
+      // Send confirmation email
+      const confirmUrl = `${c.env.DOMAIN}/api/auth/confirm-signup?token=${token}`;
+      const ok = await sendConfirmationEmail(email, confirmUrl, c.env);
+
+      if (!ok) {
+        // Roll back token if email send failed
+        await c.env.TAGS_KV.delete(`pending-signup:${token}`);
+        return c.html(renderSignupPendingPage({
+          email,
+          error: 'Failed to send confirmation email. Please try again.',
+        }));
+      }
+
+      return c.html(renderSignupPendingPage({ email }));
+    } catch (error) {
+      console.error('Email signup error:', error);
+      return c.html(renderSignupPendingPage({
+        email,
+        error: 'An error occurred. Please try again.',
+      }));
+    }
+  }
+);
+
+// GET /api/auth/confirm-signup - Verify token, create account, auto-login
+app.get('/api/auth/confirm-signup', async (c) => {
+  const token = c.req.query('token');
+  const botUsername = c.env.TELEGRAM_BOT_USERNAME;
+
+  if (!token) {
+    return c.html(renderSignupErrorPage({
+      message: 'No confirmation token provided.',
+      botUsername,
+    }));
+  }
+
+  try {
+    // Look up pending signup
+    const pending = await c.env.TAGS_KV.get(`pending-signup:${token}`);
+
+    if (!pending) {
+      return c.html(renderSignupErrorPage({
+        message: 'This confirmation link has expired or is invalid. Confirmation links are valid for 1 hour.',
+        botUsername,
+      }));
+    }
+
+    const { email, name } = JSON.parse(pending) as { email: string; name: string };
+
+    // Race-condition check: verify email still doesn't exist
+    const existingUser = await c.env.DB.prepare(
+      'SELECT id FROM users WHERE LOWER(email) = ?'
+    ).bind(email).first();
+
+    if (existingUser) {
+      // Clean up token and inform user
+      await c.env.TAGS_KV.delete(`pending-signup:${token}`);
+      return c.html(renderSignupErrorPage({
+        message: 'An account with this email already exists. Try logging in instead.',
+        botUsername,
+      }));
+    }
+
+    // Generate user ID
+    const userId = crypto.randomUUID();
+
+    // Create user with email notifications (no Telegram chat_id)
+    await c.env.DB.prepare(`
+      INSERT INTO users (id, email, name, telegram_chat_id, notification_channel, created_at)
+      VALUES (?, ?, ?, NULL, 'email', datetime('now'))
+    `).bind(userId, email, name).run();
+
+    // Delete signup token (one-time use)
+    await c.env.TAGS_KV.delete(`pending-signup:${token}`);
+
+    // Create session token (auto-login after email verification)
+    const sessionToken = await createSessionToken(
+      { userId, email },
+      c.env.JWT_SECRET,
+      parseInt(c.env.SESSION_DURATION_HOURS || '720', 10)
+    );
+
+    // Set session cookie
+    setCookie(c, 'session', sessionToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Lax',
+      maxAge: parseInt(c.env.SESSION_DURATION_HOURS || '720', 10) * 3600,
+      path: '/',
+    });
+
+    // Redirect to dashboard
+    return c.redirect('/dashboard');
+  } catch (error) {
+    console.error('Confirm signup error:', error);
+    return c.html(renderSignupErrorPage({
+      message: 'An error occurred. Please try again.',
+      botUsername,
+    }));
+  }
+});
 
 // POST /api/auth/logout - Clear session
 app.post('/api/auth/logout', (c) => {

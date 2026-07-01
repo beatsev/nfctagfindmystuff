@@ -127,3 +127,47 @@ export async function sendMagicLinkEmail(
     text
   );
 }
+
+/**
+ * Send a signup confirmation email (for email-first onboarding)
+ */
+export async function sendConfirmationEmail(
+  toEmail: string,
+  confirmUrl: string,
+  env: Env
+): Promise<boolean> {
+  const subject = 'Confirm your NFC Tracker account';
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #333;">
+  <h2 style="color: #667eea;">Welcome to NFC Tracker!</h2>
+  <p>Click the button below to confirm your email and activate your account:</p>
+  <p style="margin: 32px 0;">
+    <a href="${confirmUrl}" style="background: #667eea; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-size: 16px;">
+      Confirm Email
+    </a>
+  </p>
+  <p style="color: #888; font-size: 13px;">
+    This link expires in 1 hour. If you did not request this, you can ignore this email.
+  </p>
+  <p style="color: #bbb; font-size: 12px; margin-top: 24px;">
+    <strong>Tip:</strong> Telegram is the recommended way to use NFC Tracker — you'll get instant notifications and can manage tags directly from the chat.
+    Once your account is set up, you can link Telegram from your dashboard settings.
+  </p>
+  <p style="color: #bbb; font-size: 12px; margin-top: 24px;">Or copy this URL: ${confirmUrl}</p>
+</body>
+</html>`;
+
+  const text = `Welcome to NFC Tracker!\n\nConfirm your email by visiting this link:\n${confirmUrl}\n\nThis link expires in 1 hour.\n\nTip: Telegram is the recommended way to use NFC Tracker — instant notifications and tag management directly from chat. You can link Telegram from your dashboard settings after signup.`;
+
+  return agentMailSend(
+    env.AGENTMAIL_INBOX_ID,
+    env.AGENTMAIL_API_KEY,
+    toEmail,
+    subject,
+    html,
+    text
+  );
+}
